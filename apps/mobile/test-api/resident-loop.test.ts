@@ -79,7 +79,7 @@ describe('resident app ↔ backend', { skip: !BASE || !LOG ? 'E2E_API_URL / E2E_
 
     const tokens = memTokens();
     const locale = { v: 'ar' as 'ar' | 'en' };
-    const api = createResidentApi({ baseUrl: BASE!, tokens, getLocale: () => locale.v });
+    const api = createResidentApi({ baseUrl: BASE!, appVersion: '1.0.0', tokens, getLocale: () => locale.v });
 
     // R1: preview → start → legal → complete
     const preview = await unwrap(api.client.GET('/app/v1/invitations/{token}', { params: { path: { token } } }));
@@ -102,6 +102,19 @@ describe('resident app ↔ backend', { skip: !BASE || !LOG ? 'E2E_API_URL / E2E_
     // Used link → invitation_used (R1-AC7)
     const used = await unwrap(api.client.GET('/app/v1/invitations/{token}', { params: { path: { token } } })).catch((e) => e);
     assert.ok(used instanceof ApiError && used.code === 'invitation_used', String(used?.code));
+
+    // QA-07: the preview carries the compound phone (may be null if the compound has none)
+    assert.ok('compoundPhone' in preview, 'InvitationPreview.compoundPhone present');
+
+    // QA-03 / B6: SSE takes the bearer only in the Authorization header (what src/lib/realtime.ts sends)
+    const ctl = new AbortController();
+    const sse = await fetch(`${BASE}/app/v1/events/stream`, { headers: api.authHeaders(), signal: ctl.signal });
+    assert.equal(sse.status, 200);
+    assert.match(sse.headers.get('content-type') ?? '', /text\/event-stream/);
+    ctl.abort();
+    const inUrl = await fetch(`${BASE}/app/v1/events/stream?access_token=${encodeURIComponent(pair.accessToken)}`);
+    assert.equal(inUrl.status, 401, 'token in the query string is refused');
+    await inUrl.body?.cancel();
 
     // R5 device registration + categories in Arabic
     assert.equal((await api.client.PUT('/app/v1/devices/current', { body: { pushToken: 'test-device-token', pushEnabled: true, locale: 'ar', appVersion: '1.0.0' } })).response.status, 204);
@@ -194,6 +207,10 @@ describe('resident app ↔ backend', { skip: !BASE || !LOG ? 'E2E_API_URL / E2E_
     await unwrap(api.client.GET('/app/v1/announcements/{announcementId}', { params: { path: { announcementId: mine!.id } } }));
     list = await unwrap(api.client.GET('/app/v1/units/{unitId}/announcements', { params: { path: { unitId } } }));
     assert.equal(list.items.find((a) => a.id === mine!.id)!.isRead, true);
+    // QA-14: deep links use compoundapp://
+    for (const n of (await unwrap(api.client.GET('/app/v1/notifications'))).items) {
+      if (n.deepLink) assert.match(n.deepLink, /^compoundapp:\/\//, n.deepLink);
+    }
     assert.equal((await api.client.POST('/app/v1/notifications/read-all')).response.status, 204);
     assert.equal((await unwrap(api.client.GET('/app/v1/notifications'))).unreadCount, 0);
 
@@ -208,10 +225,32 @@ describe('resident app ↔ backend', { skip: !BASE || !LOG ? 'E2E_API_URL / E2E_
     assert.notEqual(tokens.v, pair.refreshToken);
     const oldRefresh = await fetch(`${BASE}/app/v1/auth/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: pair.refreshToken }) });
     assert.equal(oldRefresh.status, 401, 'reusing a rotated refresh token is refused');
+
+    // QA-13: 5 wrong codes per challenge; after that even the right code is refused
+    const signIn = await unwrap(api.client.POST('/app/v1/auth/otp/start', { body: { phone } }));
+    const device = { installationId: randomUUID(), platform: 'android' as const };
+    const wrong = OTP === '000000' ? '111111' : '000000';
+    for (let i = 0; i < 5; i++) {
+      const e = await unwrap(api.client.POST('/app/v1/auth/otp/verify', { body: { challengeId: signIn.challengeId, code: wrong, device } })).catch((x) => x);
+      assert.ok(e instanceof ApiError && e.status === 400, String(e?.code));
+    }
+    const spent = await unwrap(api.client.POST('/app/v1/auth/otp/verify', { body: { challengeId: signIn.challengeId, code: OTP, device } })).catch((x) => x);
+    assert.ok(spent instanceof ApiError && spent.code === 'otp_attempts_exceeded', String(spent?.code));
+  });
+
+  it('min version from /app/v1/meta; an older app gets 426 app_update_required (v1.1)', async () => {
+    const api = createResidentApi({ baseUrl: BASE!, appVersion: '1.0.0', tokens: memTokens(), getLocale: () => 'en' });
+    const meta = await unwrap(api.client.GET('/app/v1/meta'));
+    assert.match(meta.minSupportedVersion.ios, /^\d+\.\d+\.\d+$/);
+    let updateRequired = 0;
+    const old = createResidentApi({ baseUrl: BASE!, appVersion: '0.0.1', tokens: memTokens(), getLocale: () => 'en', onUpdateRequired: () => void updateRequired++ });
+    const e = await unwrap(old.client.POST('/app/v1/auth/otp/start', { body: { phone: '+966500000002' } })).catch((x) => x);
+    assert.ok(e instanceof ApiError && e.status === 426 && e.code === 'app_update_required', String(e?.code));
+    assert.equal(updateRequired, 1);
   });
 
   it('sign-in by OTP never reveals whether the number exists', async () => {
-    const api = createResidentApi({ baseUrl: BASE!, tokens: memTokens(), getLocale: () => 'en' });
+    const api = createResidentApi({ baseUrl: BASE!, appVersion: '1.0.0', tokens: memTokens(), getLocale: () => 'en' });
     const c = await unwrap(api.client.POST('/app/v1/auth/otp/start', { body: { phone: '+966500000001' } }));
     assert.ok(c.challengeId);
     const err = await unwrap(api.client.POST('/app/v1/auth/otp/verify', {
