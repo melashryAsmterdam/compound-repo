@@ -143,7 +143,7 @@ export function StatusChip({ chip, icon }: { chip: ChipModel; icon?: ComponentPr
   }
   const c = statusColors[chip.tone];
   return (
-    <View testID={`chip-${chip.tone}`} style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: c.bg, borderWidth: c.border ? 1.5 : 0, borderColor: c.border }}>
+    <View testID={`chip-${chip.tone}`} style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: c.bg, borderWidth: c.border ? (chip.tone === 'done' ? 1.5 : 1) : 0, borderColor: c.border }}>
       {icon ? <Ionicons name={icon} size={14} color={c.fg} /> : null}
       <Text variant="caption" color={c.fg}>{label}</Text>
     </View>

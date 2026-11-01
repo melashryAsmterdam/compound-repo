@@ -58,6 +58,13 @@ describe('status chips (spec §1.3)', () => {
     expect(screen.getByText('Reopened ×2')).toBeTruthy();
     expect(screen.getByTestId('chip-awaiting')).toBeTruthy();
   });
+  it('cancelled is white with a 1px border (tokens v0.1.2, 4.5:1 contrast)', async () => {
+    await renderScreen(<StatusChip chip={{ key: 'status.cancelled', tone: 'cancelled' }} />, { fetch: mockFetch({}).fetch });
+    const st = flat(screen.getByTestId('chip-cancelled').props.style);
+    expect(st.backgroundColor).toBe(color.status.cancelled.bg);
+    expect(st.borderWidth).toBe(1);
+    expect(st.borderColor).toBe(color.status.cancelled.border);
+  });
 });
 
 describe('Saha identity on screen', () => {
