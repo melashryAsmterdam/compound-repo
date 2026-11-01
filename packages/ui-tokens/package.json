@@ -9,9 +9,10 @@
   "exports": {
     ".": { "types": "./src/index.ts", "default": "./src/index.ts" },
     "./tokens.css": "./tokens.css",
-    "./tokens.json": "./saha-ui-tokens-v0.1.2.json"
+    "./tokens.json": "./saha-ui-tokens-v0.1.2.json",
+    "./assets/*": "./assets/*"
   },
-  "files": ["src", "tokens.css", "saha-ui-tokens-v0.1.2.json"],
+  "files": ["src", "assets", "tokens.css", "saha-ui-tokens-v0.1.2.json"],
   "scripts": {
     "gen:css": "node --experimental-strip-types scripts/gen-css.ts",
     "typecheck": "tsc --noEmit",
