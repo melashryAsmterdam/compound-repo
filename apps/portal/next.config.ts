@@ -7,7 +7,7 @@ const config: NextConfig = {
   // Standalone output is for the container build (Cloud Run); Vercel packages the app itself.
   output: process.env.VERCEL ? undefined : 'standalone',
   poweredByHeader: false,
-  transpilePackages: ['@compound/i18n', '@compound/domain', '@compound/api-client'],
+  transpilePackages: ['@compound/i18n', '@compound/domain', '@compound/api-client', '@compound/ui-tokens'],
   // The browser talks to the API through the portal origin, so the session cookie stays first-party.
   async rewrites() {
     return [

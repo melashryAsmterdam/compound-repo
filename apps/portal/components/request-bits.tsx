@@ -17,7 +17,7 @@ export function OutcomeBadge({ r }: { r: Pick<AdminRequestSummary, 'outcome' | '
   if (!r.outcome) return null;
   if (r.outcome === 'reopened')
     return (
-      <Chip tone="danger">
+      <Chip tone="reopened">
         <span aria-hidden>↺</span> {t('outcome.reopened', { n: r.reopenCount })}
       </Chip>
     );

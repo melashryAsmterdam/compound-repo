@@ -60,7 +60,7 @@ function EventRow({ e, requestId, onChanged }: { e: RequestEvent; requestId: str
         <span className="font-medium">{label}</span> <span className="text-xs text-muted">· {fullDate(e.createdAt, locale)}</span>
         {e.editedAt && <span className="text-xs text-muted"> · {t('ev.edited')}</span>}
       </p>
-      {e.visit && <p className="mt-1 rounded bg-info-bg px-2 py-1 text-sm text-info">{visitWindow(e.visit, locale)}</p>}
+      {e.visit && <p className="mt-1 rounded bg-visit px-2 py-1 text-sm text-ink">{visitWindow(e.visit, locale)}</p>}
       {editing ? (
         <div className="mt-2 flex flex-col gap-2">
           <Textarea dir="auto" maxLength={1000} value={text} onChange={(x) => setText(x.target.value)} />
@@ -335,9 +335,9 @@ export default function RequestDetailPage() {
           )}
 
           {r.visit && (
-            <section className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-info bg-info-bg p-4">
+            <section className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-visit p-4">
               <div>
-                <p className="font-semibold text-info">{t('detail.visitCard')}</p>
+                <p className="font-semibold text-ink">{t('detail.visitCard')}</p>
                 <p>{visitWindow(r.visit, locale)}</p>
                 <p className="text-xs text-muted">{t('detail.reminder')}</p>
               </div>

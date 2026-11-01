@@ -17,7 +17,7 @@ export function Bdi({ children, className }: { children: ReactNode; className?: 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export function Button({ variant = 'secondary', busy, className, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; busy?: boolean }) {
   const styles: Record<Variant, string> = {
-    primary: 'bg-accent text-accent-ink hover:opacity-90',
+    primary: 'bg-accent text-accent-ink hover:bg-accent-hover',
     secondary: 'bg-surface border border-line hover:bg-canvas',
     ghost: 'hover:bg-canvas',
     danger: 'bg-danger text-white hover:opacity-90',
@@ -69,18 +69,20 @@ export function Card({ children, className }: { children: ReactNode; className?:
 }
 
 const CHIP: Record<string, string> = {
-  new: 'bg-info-bg text-info',
-  in_progress: 'bg-warning-bg text-warning',
-  done: 'border border-success text-success',
-  closed: 'bg-canvas text-ink border border-line',
-  cancelled: 'bg-canvas text-muted',
+  // Request statuses: Saha tokens color.status.
+  new: 'bg-status-new-bg text-status-new',
+  in_progress: 'bg-status-in-progress-bg text-status-in-progress',
+  done: 'border border-status-done-border text-status-done',
+  closed: 'bg-status-closed-bg text-status-closed',
+  cancelled: 'bg-status-cancelled-bg text-status-cancelled',
+  reopened: 'bg-status-reopened-bg text-status-reopened',
   active: 'bg-success-bg text-success',
   invited: 'bg-info-bg text-info',
   failed: 'bg-danger-bg text-danger',
   expired: 'bg-warning-bg text-warning',
-  not_invited: 'bg-canvas text-muted border border-line',
+  not_invited: 'bg-neutral-bg text-muted',
   danger: 'bg-danger-bg text-danger',
-  neutral: 'bg-canvas text-muted border border-line',
+  neutral: 'bg-neutral-bg text-muted',
 };
 export function Chip({ tone, children }: { tone: string; children: ReactNode }) {
   return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium', CHIP[tone] ?? CHIP.neutral)}>{children}</span>;
