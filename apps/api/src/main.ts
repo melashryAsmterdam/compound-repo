@@ -1,15 +1,25 @@
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module.js';
-import { loadConfig } from './config.js';
-import { ProblemFilter } from './infra/problem.filter.js';
+import { buildApp } from './app';
+import { loadConfig } from './config';
+import { logger } from './infra/logger';
 
-async function bootstrap(): Promise<void> {
+async function main() {
   const config = loadConfig();
-  const app = await NestFactory.create(AppModule);
-  app.useGlobalFilters(new ProblemFilter());
-  app.enableShutdownHooks();
+  const { app, ctx, handlers } = await buildApp(config);
+  const runWorker = config.WORKER === '1' || config.INLINE_WORKER === '1';
+  if (runWorker) {
+    ctx.worker.start(1000);
+    setInterval(() => void handlers.tick(), 60_000);
+    void handlers.tick();
+  }
+  if (config.WORKER === '1') {
+    logger.info('worker started');
+    return;
+  }
   await app.listen(config.PORT);
+  logger.info({ port: config.PORT, db: ctx.db.driver, inlineWorker: runWorker }, 'api listening');
 }
 
-void bootstrap();
+main().catch((e) => {
+  logger.error({ err: e }, 'boot failed');
+  process.exit(1);
+});

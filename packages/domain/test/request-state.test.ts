@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   AUTO_CLOSE_AFTER_MS,
-  DomainError,
   availableCommands,
   canComment,
   transition,
   type ActorType,
   type RequestCommand,
   type RequestStatus,
-} from '../src/index.js';
+} from '../src/request-state.js';
+import { DomainError } from '../src/errors.js';
 
 const NOW = new Date('2026-11-01T10:00:00Z');
 const STATUSES: RequestStatus[] = ['new', 'in_progress', 'done', 'closed', 'cancelled'];
