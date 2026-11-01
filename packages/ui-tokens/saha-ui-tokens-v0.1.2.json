@@ -1,7 +1,10 @@
 {
   "$name": "Saha (ساحة) design tokens",
-  "$version": "0.1.1-proposal",
+  "$version": "0.1.2-proposal",
   "$status": "Proposal awaiting owner approval. Target: packages/ui-tokens (consumed by apps/mobile and apps/portal).",
+  "$changelog": [
+    "0.1.2 (2026-11-01, Portal Developer): status.cancelled now sits on white with a line border (textFaint on white = 5.02:1); on neutralBg it was 4.42:1, under the 4.5:1 rule. contrastOnWhite.textMuted corrected from 7.1 to 7.01 (measured)."
+  ],
   "color": {
     "green": {
       "50": "#EAF6EF",
@@ -67,7 +70,8 @@
       },
       "cancelled": {
         "fg": "{color.neutral.textFaint}",
-        "bg": "{color.semantic.neutralBg}"
+        "bg": "{color.neutral.white}",
+        "border": "{color.neutral.line}"
       },
       "reopened": {
         "fg": "#FFFFFF",
@@ -80,7 +84,7 @@
     "green.700": 8.4,
     "green.800": 10.91,
     "text": 16.64,
-    "textMuted": 7.1,
+    "textMuted": 7.01,
     "textFaint": 5.02,
     "gold": 5.0
   },

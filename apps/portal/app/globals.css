@@ -3,7 +3,7 @@
 @import '@compound/ui-tokens/tokens.css';
 
 /*
- * Saha design tokens v0.1.1 from packages/ui-tokens, mapped to the portal's Tailwind names.
+ * Saha design tokens v0.1.2 from packages/ui-tokens, mapped to the portal's Tailwind names.
  * Change values in the tokens package, never here. The compound's own name and logo own the header
  * (tokens brand rules); green marks the single primary action.
  */
@@ -44,6 +44,7 @@
   --color-status-closed-bg: var(--saha-status-closed-bg);
   --color-status-cancelled: var(--saha-status-cancelled-fg);
   --color-status-cancelled-bg: var(--saha-status-cancelled-bg);
+  --color-status-cancelled-border: var(--saha-status-cancelled-border);
   --color-status-reopened: var(--saha-status-reopened-fg);
   --color-status-reopened-bg: var(--saha-status-reopened-bg);
 

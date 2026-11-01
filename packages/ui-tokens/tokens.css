@@ -1,4 +1,4 @@
-/* Generated from @compound/ui-tokens v0.1.1. Do not edit; run gen:css. */
+/* Generated from @compound/ui-tokens v0.1.2. Do not edit; run gen:css. */
 :root {
   --saha-green-50: #EAF6EF;
   --saha-green-100: #D2ECDD;
@@ -46,7 +46,8 @@
   --saha-status-closed-fg: #4B5563;
   --saha-status-closed-bg: #EEF1EF;
   --saha-status-cancelled-fg: #66726A;
-  --saha-status-cancelled-bg: #EEF1EF;
+  --saha-status-cancelled-bg: #FFFFFF;
+  --saha-status-cancelled-border: #E1E7E3;
   --saha-status-reopened-fg: #FFFFFF;
   --saha-status-reopened-bg: #B42318;
   --saha-font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;

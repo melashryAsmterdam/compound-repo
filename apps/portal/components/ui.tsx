@@ -74,7 +74,7 @@ const CHIP: Record<string, string> = {
   in_progress: 'bg-status-in-progress-bg text-status-in-progress',
   done: 'border border-status-done-border text-status-done',
   closed: 'bg-status-closed-bg text-status-closed',
-  cancelled: 'bg-status-cancelled-bg text-status-cancelled',
+  cancelled: 'border border-status-cancelled-border bg-status-cancelled-bg text-status-cancelled',
   reopened: 'bg-status-reopened-bg text-status-reopened',
   active: 'bg-success-bg text-success',
   invited: 'bg-info-bg text-info',
