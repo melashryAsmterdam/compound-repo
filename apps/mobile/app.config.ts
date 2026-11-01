@@ -1,4 +1,9 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
+// The config loader can't run the TS tokens module, so read the tokens JSON from the same package.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const tokens = require('@compound/ui-tokens/tokens.json') as { color: { green: Record<string, string> } };
+// semantic.primary = green.600, semantic.header = green.700 (tokens v0.1.1).
+const color = { semantic: { primary: tokens.color.green['600']!, header: tokens.color.green['700']! } };
 
 /**
  * App config. Product name and store identity are configuration, not code: the name ساحة / Saha is
@@ -62,7 +67,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: bundleId,
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: color.semantic.primary,
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
@@ -79,11 +84,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
-    'expo-splash-screen',
+    // Splash: inverse Saha mark on the green header colour (assets from scripts/gen-brand-assets.mjs).
+    ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 160, backgroundColor: color.semantic.header, resizeMode: 'contain' }],
     'expo-secure-store',
     ['expo-localization', { supportsRTL: true }],
     'expo-font',
-    ['expo-notifications', { color: '#0F5E59' }],
+    ['expo-notifications', { color: color.semantic.primary }],
     ['expo-image-picker', { cameraPermission: permissions.en.camera, photosPermission: permissions.en.photos }],
     ['expo-local-authentication', { faceIDPermission: permissions.en.faceId }],
   ],

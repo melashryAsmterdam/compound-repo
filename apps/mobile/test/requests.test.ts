@@ -12,20 +12,20 @@ const req = (p: Partial<RequestCore>): RequestCore => ({
 
 describe('status vocabulary (§1.3)', () => {
   it.each([
-    ['new', null, 'status.new', 'info'],
-    ['in_progress', null, 'status.in_progress', 'warning'],
-    ['done', null, 'status.done', 'success'],
-    ['cancelled', null, 'status.cancelled', 'muted'],
-    ['closed', 'confirmed', 'status.closedConfirmed', 'neutral'],
-    ['closed', 'no_response', 'status.closedNoResponse', 'neutral'],
-    ['closed', null, 'status.closed', 'neutral'],
+    ['new', null, 'status.new', 'new'],
+    ['in_progress', null, 'status.in_progress', 'in_progress'],
+    ['done', null, 'status.done', 'done'],
+    ['cancelled', null, 'status.cancelled', 'cancelled'],
+    ['closed', 'confirmed', 'status.closedConfirmed', 'closed'],
+    ['closed', 'no_response', 'status.closedNoResponse', 'closed'],
+    ['closed', null, 'status.closed', 'closed'],
   ] as const)('%s/%s → %s', (status, closeReason, key, tone) => {
     expect(statusChip(req({ status, closeReason }))).toEqual({ key, tone });
   });
 
   it('done shows awaiting confirmation; reopened shows ×N only while open', () => {
     expect(outcomeBadges(req({ status: 'done' })).map((b) => b.key)).toEqual(['status.awaiting']);
-    expect(outcomeBadges(req({ status: 'in_progress', reopenCount: 2 }))).toEqual([{ key: 'status.reopened', params: { count: 2 }, tone: 'warning' }]);
+    expect(outcomeBadges(req({ status: 'in_progress', reopenCount: 2 }))).toEqual([{ key: 'status.reopened', params: { count: 2 }, tone: 'reopened' }]);
     expect(outcomeBadges(req({ status: 'closed', reopenCount: 2 }))).toEqual([]);
   });
 

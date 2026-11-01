@@ -57,7 +57,7 @@ export function RequestCard({ r, onPress }: { r: RequestSummary; onPress: () => 
       <Row style={{ flexWrap: 'wrap' }}>
         <StatusChip chip={statusChip(r)} />
         {outcomeBadges(r).map((b) => (
-          <StatusChip key={b.key} chip={b} icon={b.key === 'status.reopened' ? 'refresh' : undefined} />
+          <StatusChip key={b.key} chip={b} />
         ))}
         {r.hasUnreadUpdates ? <View accessibilityLabel={t('announcements.unread')} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.danger }} /> : null}
       </Row>
@@ -77,13 +77,13 @@ export function VisitCard({ startAt, endAt, past, rescheduled, title }: { startA
   const { locale } = useSession();
   return (
     <View testID="visit-card" accessibilityRole="summary"
-      style={{ backgroundColor: past ? colors.neutralSoft : colors.visitCard, borderRadius: radius.lg, padding: space.lg, gap: space.xs, borderWidth: 1, borderColor: past ? colors.line : colors.accent }}>
+      style={{ backgroundColor: past ? colors.neutralSoft : colors.visitCard, borderRadius: radius.md, padding: space.lg, gap: space.xs, borderWidth: 1, borderColor: colors.line }}>
       <Row>
-        <Ionicons name="calendar" size={20} color={past ? colors.muted : colors.accent} />
-        <Text variant="label" color={past ? colors.muted : colors.accent} style={{ flex: 1 }}>
+        <Ionicons name="calendar" size={20} color={past ? colors.muted : colors.ink} />
+        <Text variant="label" color={past ? colors.muted : colors.ink} style={{ flex: 1 }}>
           {past ? t('detail.visitWas', { when: '' }).trim() : (title ?? t('detail.visitScheduled'))}
         </Text>
-        {rescheduled && !past ? <StatusChip chip={{ key: 'detail.rescheduled', tone: 'warning' }} /> : null}
+        {rescheduled && !past ? <StatusChip chip={{ key: 'detail.rescheduled', tone: 'in_progress' }} /> : null}
       </Row>
       <Text color={past ? colors.muted : colors.ink}>{formatDual(startAt, locale)}</Text>
       <Ltr variant="heading" color={past ? colors.muted : colors.ink}>{formatTimeRange(startAt, endAt, locale)}</Ltr>

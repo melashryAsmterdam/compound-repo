@@ -1,5 +1,5 @@
 import {
-  IBMPlexSansArabic_400Regular, IBMPlexSansArabic_500Medium, IBMPlexSansArabic_700Bold, useFonts,
+  IBMPlexSansArabic_400Regular, IBMPlexSansArabic_500Medium, IBMPlexSansArabic_600SemiBold, IBMPlexSansArabic_700Bold, useFonts,
 } from '@expo-google-fonts/ibm-plex-sans-arabic';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -37,7 +37,7 @@ const queryClient = new QueryClient({
 const LOCK_AFTER_MS = 5 * 60 * 1000;
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ IBMPlexSansArabic_400Regular, IBMPlexSansArabic_500Medium, IBMPlexSansArabic_700Bold });
+  const [fontsLoaded] = useFonts({ IBMPlexSansArabic_400Regular, IBMPlexSansArabic_500Medium, IBMPlexSansArabic_600SemiBold, IBMPlexSansArabic_700Bold });
   const [localeReady, setLocaleReady] = useState(false);
 
   useEffect(() => {
@@ -85,7 +85,7 @@ function Navigator() {
     <Stack screenOptions={header}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="language" options={{ headerShown: false }} />
-      <Stack.Screen name="sign-in" options={{ title: t('signIn.title') }} />
+      <Stack.Screen name="sign-in" options={{ title: t('signIn.title'), headerShown: false }} />
       <Stack.Screen name="a/[token]" options={{ title: '' }} />
       <Stack.Screen name="otp" options={{ title: t('otp.title') }} />
       <Stack.Screen name="consent" options={{ title: t('consent.title') }} />

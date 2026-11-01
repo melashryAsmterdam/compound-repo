@@ -3,7 +3,8 @@ import type { Locale } from './i18n/types';
 
 /** Pure presentation rules for requests (screen spec §1.3, M-11, M-15). No React, fully unit-tested. */
 
-export type ChipTone = 'info' | 'warning' | 'success' | 'neutral' | 'muted';
+/** Tones follow tokens color.status (spec §1.3); `awaiting` is the success outline + dot. */
+export type ChipTone = 'new' | 'in_progress' | 'done' | 'closed' | 'cancelled' | 'reopened' | 'awaiting';
 export interface Chip {
   key: string;
   params?: Record<string, string | number>;
@@ -17,26 +18,26 @@ export const isAwaitingConfirmation = (r: Pick<RequestCore, 'status'>) => r.stat
 export function statusChip(r: Pick<RequestCore, 'status' | 'closeReason'>): Chip {
   switch (r.status) {
     case 'new':
-      return { key: 'status.new', tone: 'info' };
+      return { key: 'status.new', tone: 'new' };
     case 'in_progress':
-      return { key: 'status.in_progress', tone: 'warning' };
+      return { key: 'status.in_progress', tone: 'in_progress' };
     case 'done':
-      return { key: 'status.done', tone: 'success' };
+      return { key: 'status.done', tone: 'done' };
     case 'cancelled':
-      return { key: 'status.cancelled', tone: 'muted' };
+      return { key: 'status.cancelled', tone: 'cancelled' };
     case 'closed':
     default:
-      if (r.closeReason === 'confirmed') return { key: 'status.closedConfirmed', tone: 'neutral' };
-      if (r.closeReason === 'no_response') return { key: 'status.closedNoResponse', tone: 'neutral' };
-      return { key: 'status.closed', tone: 'neutral' };
+      if (r.closeReason === 'confirmed') return { key: 'status.closedConfirmed', tone: 'closed' };
+      if (r.closeReason === 'no_response') return { key: 'status.closedNoResponse', tone: 'closed' };
+      return { key: 'status.closed', tone: 'closed' };
   }
 }
 
 /** Outcome badges shown next to the status chip. */
 export function outcomeBadges(r: Pick<RequestCore, 'status' | 'reopenCount'>): Chip[] {
   const out: Chip[] = [];
-  if (r.status === 'done') out.push({ key: 'status.awaiting', tone: 'success' });
-  if (r.reopenCount > 0 && isOpen(r)) out.push({ key: 'status.reopened', params: { count: r.reopenCount }, tone: 'warning' });
+  if (r.status === 'done') out.push({ key: 'status.awaiting', tone: 'awaiting' });
+  if (r.reopenCount > 0 && isOpen(r)) out.push({ key: 'status.reopened', params: { count: r.reopenCount }, tone: 'reopened' });
   return out;
 }
 

@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast';
 import { Chevron, Ltr, Row, Text } from '@/components/ui';
 import { unwrap } from '@/lib/api';
 import { useBiometricKind } from '@/lib/biometric';
+import { SahaMark } from '@/components/brand';
 import { APP_VERSION, BRAND } from '@/lib/config';
 import { maskEmail, maskPhone } from '@/lib/phone';
 import { pushPermission } from '@/lib/push';
@@ -141,7 +142,10 @@ export default function Settings() {
           }
         />
       </Group>
-      <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>{t('settings.version', { brand: BRAND[locale], version: APP_VERSION })}</Text>
+      <Row testID="settings-footer" style={{ justifyContent: 'center' }}>
+        <SahaMark size={20} />
+        <Text variant="small" color={colors.muted}>{t('settings.version', { brand: BRAND[locale], version: APP_VERSION })}</Text>
+      </Row>
     </Screen>
   );
 }

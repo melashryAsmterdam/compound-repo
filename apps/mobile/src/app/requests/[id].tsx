@@ -15,7 +15,7 @@ import { qk, useCategories, useNotifications, useRequest } from '@/lib/queries';
 import { useLiveUpdates } from '@/lib/realtime';
 import { categoryName, orderedTimeline, outcomeBadges, statusChip, visitCardState, wasRescheduled } from '@/lib/requests';
 import { unitLabel, useSession } from '@/lib/session';
-import { colors, space } from '@/lib/theme';
+import { colors, radius, space } from '@/lib/theme';
 import { setViewerPhotos } from '@/lib/viewer';
 
 /** M-15 Request detail: decision bar, visit card, summary, timeline (oldest → newest). No composer (R3-AC4). */
@@ -117,11 +117,11 @@ export default function RequestDetailScreen() {
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <Row style={{ flexWrap: 'wrap' }}>
           <StatusChip chip={statusChip(r)} icon={r.closeReason === 'confirmed' ? 'checkmark' : undefined} />
-          {outcomeBadges(r).map((b) => <StatusChip key={b.key} chip={b} icon={b.key === 'status.reopened' ? 'refresh' : undefined} />)}
+          {outcomeBadges(r).map((b) => <StatusChip key={b.key} chip={b} />)}
         </Row>
 
         {canDecide ? (
-          <Card testID="decision-bar" style={{ borderColor: colors.success, borderWidth: 2 }}>
+          <Card testID="decision-bar" style={{ backgroundColor: colors.decision, borderColor: colors.decisionLine }}>
             <Text variant="label">{t('detail.decision')}</Text>
             {r.autoCloseAt ? <Text variant="small" color={colors.muted}>{t('detail.autoClose', { date: formatDual(r.autoCloseAt, locale) })}</Text> : null}
             {r.allowedActions?.includes('confirm') ? <Button testID="confirm-fixed" icon="checkmark" title={t('detail.yesFixed')} onPress={() => void confirm(r)} needsNetwork /> : null}
@@ -150,9 +150,9 @@ export default function RequestDetailScreen() {
         </Card>
 
         {r.reopenCount > 0 && r.status === 'in_progress' ? (
-          <Row style={{ backgroundColor: colors.warningSoft, padding: space.md, borderRadius: 10 }}>
-            <Ionicons name="refresh" size={18} color={colors.warning} />
-            <Text variant="small" color={colors.warning} style={{ flex: 1 }}>{t('detail.reopenedBanner', { count: r.reopenCount })}</Text>
+          <Row testID="reopen-callout" style={{ backgroundColor: colors.dangerSoft, borderColor: colors.danger, borderWidth: 1.5, padding: space.md, borderRadius: radius.md }}>
+            <Ionicons name="refresh" size={18} color={colors.danger} />
+            <Text variant="label" color={colors.danger} style={{ flex: 1 }}>{t('detail.reopenedBanner', { count: r.reopenCount })}</Text>
           </Row>
         ) : null}
 

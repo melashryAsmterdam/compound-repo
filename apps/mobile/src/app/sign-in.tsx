@@ -2,10 +2,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GreenHero, HeroPill, SahaMark, useLightStatusBar } from '@/components/brand';
 import { Screen } from '@/components/Screen';
 import { Button, Field, Row, Segmented, Text } from '@/components/ui';
 import { ApiError, unwrap } from '@/lib/api';
 import { setFlow } from '@/lib/flow';
+import { BRAND } from '@/lib/config';
 import { errorText } from '@/lib/i18n';
 import { localPart, parseEmail, parseSaudiMobile, toWesternDigits } from '@/lib/phone';
 import { useSession } from '@/lib/session';
@@ -19,6 +22,8 @@ import { colors, MIN_TOUCH, radius, space, type } from '@/lib/theme';
 export default function SignIn() {
   const { t } = useTranslation();
   const { api, locale, setLocale } = useSession();
+  const insets = useSafeAreaInsets();
+  useLightStatusBar();
   const { activate } = useLocalSearchParams<{ activate?: string }>();
   const activation = activate === '1';
   const [mode, setMode] = useState<'phone' | 'email'>('phone');
@@ -58,12 +63,20 @@ export default function SignIn() {
   }
 
   return (
-    <Screen>
-      <Row style={{ justifyContent: 'flex-end' }}>
-        <Button kind="ghost" title={locale === 'ar' ? 'English' : 'العربية'} onPress={() => void setLocale(locale === 'ar' ? 'en' : 'ar')} />
-      </Row>
-      <Text variant="title">{t('signIn.title')}</Text>
-      <Text color={colors.muted}>{t('signIn.subtitle')}</Text>
+    <Screen edges={['bottom']} contentStyle={{ paddingTop: 0 }}>
+      {/* M-03 green hero with the pattern and the Saha mark (product identity lives here, not in tabs). */}
+      <GreenHero testID="signin-hero" bottomRadius={radius.xl + space.xs}
+        style={{ marginHorizontal: -space.lg, paddingTop: insets.top + space.sm, paddingBottom: space.xl, paddingHorizontal: space.lg, gap: space.sm }}>
+        <Row style={{ justifyContent: 'flex-end' }}>
+          <HeroPill title={locale === 'ar' ? 'English' : 'العربية'} onPress={() => void setLocale(locale === 'ar' ? 'en' : 'ar')} />
+        </Row>
+        <View style={{ alignItems: 'center', gap: space.sm }}>
+          <SahaMark size={72} inverse label={BRAND[locale]} />
+          <Text variant="title" color={colors.headerInk}>{BRAND[locale]}</Text>
+          <Text variant="title" color={colors.headerInk} style={{ marginTop: space.sm, textAlign: 'center' }}>{t('signIn.title')}</Text>
+          <Text color={colors.headerMuted} style={{ textAlign: 'center' }}>{t('signIn.subtitle')}</Text>
+        </View>
+      </GreenHero>
       <Segmented
         options={[{ value: 'phone', label: t('signIn.mobileTab') }, { value: 'email', label: t('signIn.emailTab') }]}
         value={mode}

@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { useOnline } from '@/lib/network';
 import type { Chip as ChipModel } from '@/lib/requests';
-import { colors, MIN_TOUCH, radius, space, type } from '@/lib/theme';
+import { colors, MIN_TOUCH, radius, space, statusColors, type } from '@/lib/theme';
 
 type Variant = keyof typeof type;
 
@@ -117,21 +117,35 @@ export function Chevron({ color = colors.muted }: { color?: string }) {
   return <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={color} />;
 }
 
-const TONES: Record<ChipModel['tone'], { bg: string; fg: string; border?: string }> = {
-  info: { bg: colors.infoSoft, fg: colors.info },
-  warning: { bg: colors.warningSoft, fg: colors.warning },
-  success: { bg: colors.surface, fg: colors.success, border: colors.success },
-  neutral: { bg: colors.neutralSoft, fg: colors.ink },
-  muted: { bg: colors.neutralSoft, fg: colors.muted },
-};
-
+/**
+ * Status chip, awaiting-confirmation badge and reopened badge (spec §1.3, tokens color.status).
+ * Colour is never the only signal: every chip has text, awaiting has a dot, reopened has an icon.
+ */
 export function StatusChip({ chip, icon }: { chip: ChipModel; icon?: ComponentProps<typeof Ionicons>['name'] }) {
   const { t } = useTranslation();
-  const tone = TONES[chip.tone];
+  const label = t(chip.key, chip.params);
+  if (chip.tone === 'awaiting') {
+    return (
+      <View testID="chip-awaiting" style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start' }}>
+        <View style={{ width: 7, height: 7, borderRadius: radius.pill, backgroundColor: colors.success }} />
+        <Text variant="caption" color={colors.success}>{label}</Text>
+      </View>
+    );
+  }
+  if (chip.tone === 'reopened') {
+    const c = statusColors.reopened;
+    return (
+      <View testID="chip-reopened" style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', paddingHorizontal: space.sm, paddingVertical: 1, borderRadius: radius.sm, backgroundColor: c.bg }}>
+        <Ionicons name="refresh" size={12} color={c.fg} />
+        <Text variant="caption" color={c.fg}>{label}</Text>
+      </View>
+    );
+  }
+  const c = statusColors[chip.tone];
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: tone.bg, borderWidth: tone.border ? 1 : 0, borderColor: tone.border }}>
-      {icon ? <Ionicons name={icon} size={14} color={tone.fg} /> : null}
-      <Text variant="small" color={tone.fg}>{t(chip.key, chip.params)}</Text>
+    <View testID={`chip-${chip.tone}`} style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: c.bg, borderWidth: c.border ? 1.5 : 0, borderColor: c.border }}>
+      {icon ? <Ionicons name={icon} size={14} color={c.fg} /> : null}
+      <Text variant="caption" color={c.fg}>{label}</Text>
     </View>
   );
 }
@@ -149,8 +163,8 @@ export function Card({ children, onPress, style, accessibilityLabel, testID }: {
   );
 }
 
-export function Row({ children, style, gap = space.sm }: { children: ReactNode; style?: StyleProp<ViewStyle>; gap?: number }) {
-  return <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, style]}>{children}</View>;
+export function Row({ children, style, gap = space.sm, testID }: { children: ReactNode; style?: StyleProp<ViewStyle>; gap?: number; testID?: string }) {
+  return <View testID={testID} style={[{ flexDirection: 'row', alignItems: 'center', gap }, style]}>{children}</View>;
 }
 
 export function Field({ label, error, helper, counter, ...input }: TextInputProps & { label: string; error?: string | null; helper?: string; counter?: string }) {
