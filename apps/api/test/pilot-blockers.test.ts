@@ -165,3 +165,32 @@ describe('Architect decision (Q-28): deactivating a unit revokes its owner', () 
     expect(JSON.stringify(row?.changes)).toContain('unit_deactivated');
   });
 });
+
+describe('Architect decision 6: activation runs one tenant transaction per compound', () => {
+  it('activates units in two compounds and audits each in its own compound', async () => {
+    const other = await adminSession(env, `second-${Date.now()}@test.sa`);
+    const phone = nextPhone();
+    const invite = async (s: AdminSession, number: string) => {
+      const u = await s.post('/admin/v1/units', { number, block: 'A', type: 'villa' }).expect(201);
+      await s.put(`/admin/v1/units/${u.body.id}/owner`, { fullName: 'Reem', phone }).expect(200);
+      await s.post(`/admin/v1/units/${u.body.id}/invitations`, { channels: ['sms'] }).expect(201);
+      await env.drain();
+      return u.body.id as string;
+    };
+    const u1 = await invite(admin, 'D6-1');
+    const token = inviteTokenFrom(env, phone);
+    const u2 = await invite(other, 'D6-2');
+    const start = await env.http.post('/app/v1/activation/start').send({ invitationToken: token }).expect(200);
+    const code = env.ctx.channels.last('sms', phone)!.text.match(/\b(\d{6})\b/)![1];
+    const done = await env.http
+      .post('/app/v1/activation/complete')
+      .send({ challengeId: start.body.challengeId, code, consent: { privacyNoticeVersion: '2026-11-01', termsVersion: '2026-11-01', locale: 'ar' }, device: { installationId: crypto.randomUUID(), platform: 'android' } })
+      .expect(200);
+    expect(done.body.accessToken).toBeTruthy();
+    for (const [s, unitId] of [[admin, u1], [other, u2]] as const) {
+      expect((await s.get(`/admin/v1/units/${unitId}`).expect(200)).body.activation).toBe('active');
+    }
+    const audits = await env.ctx.db.system((tx) => tx.query<any>(`SELECT compound_id FROM audit_log WHERE action = 'assignment.activate' AND actor_id = $1`, [done.body.me.personId]));
+    expect(new Set(audits.map((a) => a.compound_id))).toEqual(new Set([admin.compoundId, other.compoundId]));
+  });
+});
