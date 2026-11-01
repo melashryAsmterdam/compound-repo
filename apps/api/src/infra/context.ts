@@ -30,9 +30,12 @@ export class AppContext {
 
   static async create(config: Config): Promise<AppContext> {
     const db = config.DB_DRIVER === 'pg' ? await Db.pg(config.DATABASE_URL!) : await Db.pglite(config.PGLITE_DIR);
-    await db.migrate();
+    // B5: local PGlite migrates itself; on Postgres the migrate job runs once per deploy and the
+    // API only checks the schema is current (its login role needs no DDL rights).
+    if (config.DB_DRIVER === 'pglite') await db.migrate();
+    else await db.assertMigrated();
     const clock = new Clock();
-    const channels = new ConsoleChannels();
+    const channels = new ConsoleChannels({ logText: config.LOG_MESSAGE_TEXT === '1' });
     const storage = new LocalStorage(config.STORAGE_DIR, config.STORAGE_SECRET, config.PUBLIC_API_URL);
     const hub = new RealtimeHub();
     await hub.start(db);

@@ -88,7 +88,7 @@ describe('request lifecycle (PRD §5)', () => {
     // R4: reopen with reason → In Progress, flagged
     const notifs = (await resident.get('/app/v1/notifications').expect(200)).body;
     expect(notifs.unreadCount).toBeGreaterThan(0);
-    expect(notifs.items[0]).toMatchObject({ type: 'request_status_changed', deepLink: `compound://requests/${id}` });
+    expect(notifs.items[0]).toMatchObject({ type: 'request_status_changed', deepLink: `compoundapp://requests/${id}` });
     const ro = await resident.post(`/app/v1/requests/${id}/reopen`, { reason: 'Still dripping', expectedVersion: d.version }).expect(200);
     expect(ro.body).toMatchObject({ status: 'in_progress', reopenCount: 1, allowedActions: [] });
     expect((await admin.get('/admin/v1/requests/counters').expect(200)).body).toMatchObject({ reopened: 1, inProgress: 1 });

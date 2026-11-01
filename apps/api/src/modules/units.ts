@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { DomainError, notFound } from '../errors';
 import { AppContext } from '../infra/context';
 import { audit } from '../infra/audit';
-import { newId, randomToken, sha256 } from '../infra/crypto';
+import { derivedToken, newId, sha256 } from '../infra/crypto';
 import type { Tx } from '../infra/db';
 import { enqueue } from '../infra/jobs';
 import { publish } from '../infra/realtime';
@@ -187,6 +187,25 @@ export class UnitsController {
     });
   }
 
+  /** Contract v1.1: counters for the Units page header (replaces six count calls). */
+  @Get('summary')
+  async summary(@Req() req: AppRequest) {
+    const now = this.ctx.now();
+    return this.tenant(req, async (tx) => {
+      const r = await tx.one<any>(
+        `SELECT count(*)::int AS total,
+                count(*) FILTER (WHERE x.status = 'active')::int AS active,
+                count(*) FILTER (WHERE x.status = 'inactive')::int AS inactive,
+                count(*) FILTER (WHERE x.assignment_status = 'active')::int AS assigned,
+                count(*) FILTER (WHERE x.person_id IS NULL)::int AS unassigned,
+                count(*) FILTER (WHERE x.activation = 'invited')::int AS pending_invitations
+           FROM (${UNIT_SELECT.replaceAll('$NOW', '$1')}) x`,
+        [now],
+      );
+      return { total: r.total, active: r.active, inactive: r.inactive, assigned: r.assigned, unassigned: r.unassigned, pendingInvitations: r.pending_invitations };
+    });
+  }
+
   @Get(':unitId')
   get(@Req() req: AppRequest, @Param('unitId', ParseUUIDPipe) unitId: string) {
     return this.detail(req, unitId);
@@ -210,7 +229,18 @@ export class UnitsController {
         const sets = Object.keys(changes).map((f, i) => `${f} = $${i + 2}`);
         await tx.query(`UPDATE unit SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [unitId, ...Object.values(changes).map((c) => c[1])]);
         const action = changes.status ? (changes.status[1] === 'inactive' ? 'unit.deactivate' : 'unit.activate') : 'unit.update';
-        await audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action, entityType: 'unit', entityId: unitId, changes, ...clientMeta(req) });
+        // Architect decision 2026-11-01 (Q-28): deactivating revokes the owner and their pending invitations
+        // in the same transaction. Requests stay with the admin; the resident loses access.
+        let revokedAssignmentId: string | null = null;
+        if (action === 'unit.deactivate') {
+          const current = await tx.one<any>(`SELECT * FROM unit_assignment WHERE unit_id = $1 AND status <> 'revoked'`, [unitId]);
+          if (current) {
+            await this.revokeAssignment(tx, current, a.id, before, this.ctx.now(), req);
+            revokedAssignmentId = current.id;
+          }
+        }
+        const auditChanges = revokedAssignmentId ? { ...changes, revokedAssignment: [revokedAssignmentId, 'unit_deactivated'] as [unknown, unknown] } : changes;
+        await audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action, entityType: 'unit', entityId: unitId, changes: auditChanges, ...clientMeta(req) });
       });
     } catch (e) {
       if (isUniqueViolation(e, 'unit_number_uq')) throw new DomainError('unit_number_taken', 409);
@@ -370,7 +400,7 @@ export class UnitsController {
       if (recent!.n >= INVITES_PER_UNIT_PER_DAY) throw new DomainError('invite_limit_reached', 429);
       await tx.query(`UPDATE invitation SET superseded_at = $2 WHERE assignment_id = $1 AND used_at IS NULL AND superseded_at IS NULL AND revoked_at IS NULL`, [asg.id, now]);
       const id = newId();
-      const token = randomToken();
+      const token = derivedToken(this.ctx.config.TOKEN_SECRET, 'invitation', id);
       await tx.query(
         `INSERT INTO invitation (id, compound_id, assignment_id, token_hash, channels, locale, expires_at, created_by, created_at)
          VALUES ($1,$2,$3,$4,$5::channel[],$6,$7,$8,$9)`,
@@ -383,8 +413,8 @@ export class UnitsController {
           [newId(), a.compoundId, id, ch, dest, ch === 'sms' ? this.ctx.sms.provider : this.ctx.email.provider],
         );
       }
-      // The raw token lives only in this job's payload until the worker sends it, then the payload is wiped.
-      await enqueue(tx, 'send-invitation', { invitationId: id, compoundId: a.compoundId, token });
+      // IDs only (B3): the worker re-derives the link token from TOKEN_SECRET at send time.
+      await enqueue(tx, 'send-invitation', { invitationId: id, compoundId: a.compoundId });
       await audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action: 'invitation.send', entityType: 'invitation', entityId: id, changes: { channels: [null, channels] }, ...clientMeta(req) });
       await publish(tx, { compoundId: a.compoundId, admins: true, personIds: [], type: 'invitation.updated', entityId: unitId });
       const row = await tx.one<any>(`SELECT i.*, ad.full_name AS created_by_name FROM invitation i LEFT JOIN admin_user ad ON ad.id = i.created_by WHERE i.id = $1`, [id]);

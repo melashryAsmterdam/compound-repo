@@ -5,11 +5,10 @@ import { PORTAL, fill, type Locale } from '@compound/i18n';
 import type { Schemas } from '@compound/api-client';
 import { serverGet } from '@/lib/server-api';
 import { CopyLink } from './copy-link';
+import { DEFAULT_APP_STORE_URL, playStoreLink } from '@/lib/store-links';
 
 export const metadata: Metadata = { robots: { index: false, follow: false }, referrer: 'no-referrer' };
 
-const APP_STORE = process.env.APP_STORE_URL ?? 'https://apps.apple.com/';
-const PLAY_STORE = process.env.PLAY_STORE_URL ?? 'https://play.google.com/store/apps/';
 
 /** W-01 invite landing / W-02 invite not valid. No analytics; token never shown as text. */
 export default async function InviteLanding({ params }: { params: Promise<{ token: string }> }) {
@@ -46,8 +45,8 @@ export default async function InviteLanding({ params }: { params: Promise<{ toke
   const first = inv.fullName.split(/\s+/)[0] ?? inv.fullName;
   const qr = os === 'desktop' ? await QRCode.toDataURL(link, { margin: 1, width: 220 }) : null;
   const stores = [
-    { key: 'ios', href: APP_STORE, label: t('invite.appStore') },
-    { key: 'android', href: PLAY_STORE, label: t('invite.playStore') },
+    { key: 'ios', href: process.env.APP_STORE_URL || DEFAULT_APP_STORE_URL, label: t('invite.appStore') },
+    { key: 'android', href: playStoreLink(token), label: t('invite.playStore') },
   ].sort((a) => (a.key === os ? -1 : 1));
 
   return (

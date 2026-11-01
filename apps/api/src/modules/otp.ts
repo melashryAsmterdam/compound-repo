@@ -83,6 +83,8 @@ export class OtpService {
     const row = await this.ctx.db.system((tx) => tx.one<any>(`SELECT * FROM otp_challenge WHERE id = $1`, [challengeId]));
     if (!row || !purposes.includes(row.purpose) || row.consumed_at) throw new DomainError('otp_expired', 400);
     if (row.resends >= MAX_RESENDS) throw new DomainError('otp_resend_limit', 429);
+    // QA-13: wrong attempts count per challenge, not per code — a resend does not reset them.
+    if (row.attempts >= MAX_ATTEMPTS) throw new DomainError('otp_attempts_exceeded', 400);
     const lastSent = new Date(row.created_at);
     if (now.getTime() - lastSent.getTime() < RESEND_COOLDOWN_MS) throw new DomainError('rate_limited', 429, { resendAvailableAt: new Date(lastSent.getTime() + RESEND_COOLDOWN_MS).toISOString() });
     const code = this.code();
@@ -90,7 +92,7 @@ export class OtpService {
     await this.ctx.db.system(async (tx) => {
       await hit(tx, `otp:dest:h:${row.destination}`, this.ctx.config.OTP_DEST_HOURLY_LIMIT, HOUR, 'rate_limited', now);
       await tx.query(
-        `UPDATE otp_challenge SET code_hash = $2, expires_at = $3, resends = resends + 1, attempts = 0, created_at = $4 WHERE id = $1`,
+        `UPDATE otp_challenge SET code_hash = $2, expires_at = $3, resends = resends + 1, created_at = $4 WHERE id = $1`,
         [challengeId, this.hash(challengeId, code), expiresAt, now],
       );
     });

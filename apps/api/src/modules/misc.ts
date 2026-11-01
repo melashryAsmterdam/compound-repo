@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Patch, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Injectable, Param, Patch, Post, Put, Query, Req, Res, UseGuards, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { maskPhone, normaliseSaudiMobile } from '@compound/domain';
 import { CATEGORIES } from '@compound/i18n';
 import type { Request, Response } from 'express';
@@ -310,5 +310,51 @@ export class HealthController {
   @Get()
   ok() {
     return { status: 'ok' };
+  }
+}
+
+/** "1.2.10" → [1, 2, 10]; null for anything that is not a plain x.y.z version. */
+export function parseVersion(v: unknown): [number, number, number] | null {
+  const m = typeof v === 'string' ? /^(\d+)\.(\d+)\.(\d+)$/.exec(v.trim()) : null;
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+export function versionBelow(v: [number, number, number], min: [number, number, number]): boolean {
+  for (let i = 0; i < 3; i++) if (v[i] !== min[i]) return v[i]! < min[i]!;
+  return false;
+}
+
+/** Contract v1.1: public app version info; the app forces an update below the minimum. */
+@Controller('app/v1/meta')
+export class AppMetaController {
+  constructor(@Inject(AppContext) private readonly ctx: AppContext) {}
+
+  @Get()
+  meta() {
+    const c = this.ctx.config;
+    return {
+      minSupportedVersion: { ios: c.APP_MIN_VERSION_IOS, android: c.APP_MIN_VERSION_ANDROID },
+      latestVersion: { ios: c.APP_LATEST_VERSION_IOS, android: c.APP_LATEST_VERSION_ANDROID },
+    };
+  }
+}
+
+/**
+ * 426 app_update_required on /app/v1 (except /app/v1/meta) when X-App-Version is below the minimum.
+ * The contract sends no platform header, so the check uses the lower of the two minimums; the app's
+ * own start-up call to /meta enforces the per-platform minimum. Requests without the header pass.
+ */
+@Injectable()
+export class AppVersionGuard implements CanActivate {
+  constructor(private readonly ctx: AppContext) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const req = context.switchToHttp().getRequest<Request>();
+    if (!req.path.startsWith('/app/v1/') || req.path.startsWith('/app/v1/meta')) return true;
+    const v = parseVersion(req.headers['x-app-version']);
+    if (!v) return true;
+    const mins = [parseVersion(this.ctx.config.APP_MIN_VERSION_IOS)!, parseVersion(this.ctx.config.APP_MIN_VERSION_ANDROID)!];
+    const lowest = versionBelow(mins[0]!, mins[1]!) ? mins[0]! : mins[1]!;
+    if (versionBelow(v, lowest)) throw new DomainError('app_update_required', 426);
+    return true;
   }
 }

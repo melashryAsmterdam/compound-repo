@@ -37,6 +37,8 @@ export async function enqueue(
 }
 
 const BACKOFF_MS = [30_000, 120_000, 600_000, 1_800_000];
+/** A job still `running` this long after it was claimed belongs to a dead worker and is retried (B4). */
+export const VISIBILITY_TIMEOUT_MS = 5 * 60 * 1000;
 
 export type Handler = (job: JobRow) => Promise<void>;
 
@@ -63,9 +65,11 @@ export class Worker {
       const batch = await this.db.system((tx) =>
         tx.query<JobRow>(
           `UPDATE job SET status = 'running', attempts = attempts + 1, locked_at = $1, updated_at = $1
-           WHERE id IN (SELECT id FROM job WHERE status = 'pending' AND run_at <= $1 ORDER BY run_at, created_at LIMIT 20 FOR UPDATE SKIP LOCKED)
+           WHERE id IN (SELECT id FROM job
+                         WHERE (status = 'pending' AND run_at <= $1) OR (status = 'running' AND locked_at < $2)
+                         ORDER BY run_at, created_at LIMIT 20 FOR UPDATE SKIP LOCKED)
            RETURNING id, name, payload, attempts, max_attempts`,
-          [now],
+          [now, new Date(now.getTime() - VISIBILITY_TIMEOUT_MS)],
         ),
       );
       if (batch.length === 0) return total;

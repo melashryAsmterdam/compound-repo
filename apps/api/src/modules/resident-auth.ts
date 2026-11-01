@@ -150,6 +150,7 @@ export class ResidentAuthController {
         block: inv.block,
         otpChannel: channel,
         maskedDestination: maskDestination(channel === 'sms' ? inv.phone_e164 : inv.email),
+        compoundPhone: inv.contact_phone ?? null, // contract v1.1 (QA-07)
         privacyNoticeVersion: LEGAL_VERSIONS.privacy_notice,
         termsVersion: LEGAL_VERSIONS.terms,
       };
