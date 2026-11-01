@@ -2,12 +2,12 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { loadConfig } from './config.js';
-import { ProblemFilter } from './infra/problem.filter.js';
+import { configureApp } from './setup.js';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
-  const app = await NestFactory.create(AppModule);
-  app.useGlobalFilters(new ProblemFilter());
+  const app = await NestFactory.create(AppModule.register({ config }));
+  configureApp(app, config);
   app.enableShutdownHooks();
   await app.listen(config.PORT);
 }
