@@ -37,3 +37,9 @@ export function riyadhToday() {
 export function riyadhToIso(date: string, time: string) {
   return new Date(`${date}T${time}:00+03:00`).toISOString();
 }
+
+/** Hijri (Umm al-Qura) equivalent of a YYYY-MM-DD picked in a Gregorian date input (QA-09). */
+export function hijriOf(date: string | null | undefined, locale: Locale) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return '';
+  return formatDual(`${date}T09:00:00Z`, locale).hijri;
+}

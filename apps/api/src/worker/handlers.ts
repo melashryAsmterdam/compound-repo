@@ -23,6 +23,8 @@ import type { RequestsCore } from '../modules/requests-core';
 const SMS_TEMPLATES = new Set(['request_status_changed_done', 'visit_scheduled', 'visit_rescheduled', 'announcement']);
 
 /** Job consumers and crons (architecture §6–7). */
+export const VISIT_REMINDER_INTERVAL_MS = 5 * 60 * 1000;
+
 export class WorkerHandlers {
   constructor(
     private readonly ctx: AppContext,
@@ -269,6 +271,7 @@ export class WorkerHandlers {
   }
 
   /** From 20:00 compound time: reminders for visits starting tomorrow (Q-12). */
+  /** Reminders for tomorrow's visits, from 20:00 compound time (A4: "the evening before"). */
   async visitReminders(): Promise<number> {
     const now = this.ctx.now();
     const compounds = await this.ctx.db.system((tx) => tx.query<any>(`SELECT id, timezone FROM compound WHERE status = 'active'`));
@@ -324,7 +327,9 @@ export class WorkerHandlers {
     };
     await once('announcement-dispatch', slot(60_000), () => this.announcements.dispatchDue());
     await once('auto-close', slot(3_600_000), () => this.autoClose());
-    await once('visit-reminders', slot(3_600_000), () => this.visitReminders());
+    // QA-11: every 5 minutes from 20:00, so the reminder lands at 20:00–20:05 and a visit booked later
+    // in the evening for tomorrow still gets one (until 23:55; later bookings just got the visit push).
+    await once('visit-reminders', slot(VISIT_REMINDER_INTERVAL_MS), () => this.visitReminders());
     await once('housekeeping', slot(86_400_000), () => this.housekeeping());
   }
 }

@@ -103,6 +103,23 @@ test('admin manages a unit, the resident reports, the admin works the request', 
   await expect(page.getByPlaceholder('اكتب تعليقًا للساكن')).toBeVisible(); // Done still allows comments
 });
 
+test('requests table fits a tablet and date filters show the Hijri date (QA-08, QA-09)', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await signIn(page);
+  await page.goto('/requests?status=new,in_progress,done,closed,cancelled');
+  const table = page.locator('table');
+  await expect(table).toBeVisible();
+  const box = page.locator('table').locator('..');
+  expect(await box.evaluate((el) => el.scrollWidth <= el.clientWidth), 'table scrolls sideways at 820 px').toBe(true);
+  await expect(page.getByRole('columnheader', { name: 'الإنشاء' })).toBeVisible();
+  const id = page.locator('tbody tr').first().locator('td').first().locator('a');
+  const lineHeight = await id.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+  expect((await id.boundingBox())!.height).toBeLessThan(lineHeight * 1.5); // REQ-00001 on one line
+
+  await page.getByLabel('تاريخ الإنشاء من').fill('2026-11-02');
+  await expect(page.getByText('22 جمادى الأولى 1448 هـ')).toBeVisible();
+});
+
 test('announcement composer shows the audience counter and sends (A5)', async ({ page }) => {
   await signIn(page);
   await page.goto('/announcements/new');

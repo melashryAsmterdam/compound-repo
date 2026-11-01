@@ -8,7 +8,7 @@ import { CategoryLabel, OutcomeBadge, StatusChip, useCategoryName } from '@/comp
 import { StatusDialog } from '@/components/status-dialog';
 import { Bdi, Button, Empty, ErrorPanel, Input, PageHeader, Select, Skeleton, cx, useToast } from '@/components/ui';
 import { ApiError, get, qs, type AdminRequestSummary } from '@/lib/api';
-import { fullDate, relative, shortDate, visitWindow } from '@/lib/format';
+import { fullDate, hijriOf, relative, shortDate, visitWindow } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { useLive } from '@/lib/live';
 import { useBlocks, useCategories, useCounters } from '@/lib/queries';
@@ -156,10 +156,12 @@ function Dashboard() {
         <label className="flex flex-col text-xs">
           {t('req.filter.from')}
           <Input type="date" value={f.createdFrom} onChange={(e) => setF({ createdFrom: e.target.value })} />
+          {f.createdFrom && <span className="mt-0.5 text-muted">{hijriOf(f.createdFrom, locale)}</span>}
         </label>
         <label className="flex flex-col text-xs">
           {t('req.filter.to')}
           <Input type="date" value={f.createdTo} onChange={(e) => setF({ createdTo: e.target.value })} />
+          {f.createdTo && <span className="mt-0.5 text-muted">{hijriOf(f.createdTo, locale)}</span>}
         </label>
         <label className="flex flex-col text-xs">
           {t('req.sort')}
@@ -209,7 +211,7 @@ function Dashboard() {
             <thead className="bg-canvas text-start text-xs text-muted">
               <tr>
                 {(['id', 'unit', 'resident', 'category', 'description', 'status', 'outcome', 'visit', 'created', 'updated'] as const).map((h) => (
-                  <th key={h} scope="col" className="px-3 py-2 text-start font-medium">
+                  <th key={h} scope="col" className={cx('whitespace-nowrap px-3 py-2 text-start font-medium', WIDE_ONLY.has(h) && 'hidden xl:table-cell')}>
                     {t(`req.col.${h}`)}
                   </th>
                 ))}
@@ -223,29 +225,34 @@ function Dashboard() {
                   className={cx('group cursor-pointer border-t border-line hover:bg-canvas', r.outcome === 'reopened' && 'border-s-4 border-s-danger')}
                   onClick={(e) => (e.metaKey || e.ctrlKey ? window.open(`/requests/${r.ref}`, '_blank') : router.push(`/requests/${r.ref}`))}
                 >
-                  <td className="px-3 py-2 font-medium">
+                  <td className="whitespace-nowrap px-3 py-2 font-medium">
                     <Link href={`/requests/${r.ref}`} onClick={(e) => e.stopPropagation()} className="text-accent">
                       <Bdi>{r.ref}</Bdi>
                     </Link>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <Bdi>{r.unit.number}</Bdi>
-                    {r.unit.block && <span className="text-muted"> · {t('req.block', { block: r.unit.block })}</span>}
+                  <td className="px-3 py-2">
+                    <Bdi className="whitespace-nowrap">{r.unit.number}</Bdi>
+                    {r.unit.block && <span className="block whitespace-nowrap text-xs text-muted xl:inline xl:text-sm"><span className="hidden xl:inline"> · </span>{t('req.block', { block: r.unit.block })}</span>}
                   </td>
                   <td className="px-3 py-2">{r.residentName}</td>
-                  <td className="px-3 py-2">
+                  <td className="hidden px-3 py-2 xl:table-cell">
                     <CategoryLabel code={r.categoryCode} />
                   </td>
-                  <td className="max-w-64 truncate px-3 py-2" dir="auto" title={r.description}>
+                  <td className="max-w-32 truncate px-3 py-2 xl:max-w-64" dir="auto" title={r.description}>
                     {r.description.split('\n')[0]}
                   </td>
                   <td className="px-3 py-2">
-                    <StatusChip status={r.status} />
+                    <div className="flex flex-col items-start gap-1">
+                      <StatusChip status={r.status} />
+                      <span className="xl:hidden">
+                        <OutcomeBadge r={r} />
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="hidden px-3 py-2 xl:table-cell">
                     <OutcomeBadge r={r} />
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs">{r.visit ? visitWindow(r.visit, locale) : ''}</td>
+                  <td className="hidden whitespace-nowrap px-3 py-2 text-xs xl:table-cell">{r.visit ? visitWindow(r.visit, locale) : ''}</td>
                   <td className="whitespace-nowrap px-3 py-2" title={fullDate(r.createdAt, locale)}>
                     {shortDate(r.createdAt, locale)}
                   </td>
@@ -253,7 +260,7 @@ function Dashboard() {
                   <td className="px-3 py-2">
                     {r.status === 'new' && (
                       <Button
-                        className="opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100"
                         onClick={(e) => {
                           e.stopPropagation();
                           setStartFor(r);
@@ -280,6 +287,12 @@ function Dashboard() {
     </>
   );
 }
+
+/**
+ * QA-08: below 1280 px (tablets) category and visit drop out (both are on the detail page) and the
+ * outcome badge moves under the status, so ID, dates and status stay visible without sideways scroll.
+ */
+const WIDE_ONLY = new Set(['category', 'outcome', 'visit']);
 
 export default function Page() {
   return (
