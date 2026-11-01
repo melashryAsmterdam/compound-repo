@@ -181,6 +181,8 @@ export class AdminRequestsController {
       if (input.visit) {
         visit = visitWindowToUtc(input.visit, r.timezone);
         if (!visit) throw new DomainError('visit_invalid', 422, { errors: [{ field: 'visit.endTime', code: 'visit_invalid' }] });
+        // QA-06 / contract v1.1: the visit must start later than now (compound time zone).
+        if (visit.startAt.getTime() <= now.getTime()) throw new DomainError('visit_in_past', 422, { errors: [{ field: 'visit.date', code: 'visit_in_past' }] });
         type = r.visit_start_at ? 'visit_rescheduled' : 'visit_scheduled';
       }
       const eventId = newId();

@@ -4,6 +4,9 @@ import type { PGlite } from '@electric-sql/pglite';
 import { Pool, type PoolClient } from 'pg';
 import { logger } from './logger';
 
+/** Arbitrary constant shared by every migrate run (pg_advisory_xact_lock key). */
+const MIGRATION_LOCK_KEY = 7_311_002;
+
 /** One query surface inside a transaction. */
 export interface Tx {
   query<T = Record<string, any>>(sql: string, params?: unknown[]): Promise<T[]>;
@@ -132,19 +135,42 @@ export class Db {
     return this.closeImpl();
   }
 
-  async migrate(): Promise<void> {
-    const dir = join(__dirname, 'migrations');
-    await this.owner((tx) => tx.query('CREATE TABLE IF NOT EXISTS schema_migration (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())'));
+  static migrationFiles(): string[] {
+    return readdirSync(join(__dirname, 'migrations')).filter((f) => f.endsWith('.sql')).sort();
+  }
+
+  /** Migrations not yet applied. Read-only, so the API can check at boot without DDL rights (B5). */
+  async pendingMigrations(): Promise<string[]> {
+    const exists = await this.owner((tx) => tx.one<{ t: string | null }>(`SELECT to_regclass('public.schema_migration')::text AS t`));
+    if (!exists?.t) return Db.migrationFiles();
     const done = new Set((await this.owner((tx) => tx.query<{ name: string }>('SELECT name FROM schema_migration'))).map((r) => r.name));
-    for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
-      if (done.has(file)) continue;
-      const sql = readFileSync(join(dir, file), 'utf8');
-      await this.owner(async (tx) => {
+    return Db.migrationFiles().filter((f) => !done.has(f));
+  }
+
+  /**
+   * Apply pending migrations. Run once per deploy as its own job (`pnpm migrate`, B5), never by
+   * every API instance. Each file runs under a transaction-scoped advisory lock and re-checks that
+   * it is still pending, so two concurrent runs cannot apply the same DDL twice.
+   */
+  async migrate(): Promise<void> {
+    await this.owner((tx) => tx.query('CREATE TABLE IF NOT EXISTS schema_migration (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())'));
+    for (const file of Db.migrationFiles()) {
+      const sql = readFileSync(join(__dirname, 'migrations', file), 'utf8');
+      const applied = await this.owner(async (tx) => {
+        await tx.query('SELECT pg_advisory_xact_lock($1)', [MIGRATION_LOCK_KEY]);
+        if (await tx.one('SELECT 1 FROM schema_migration WHERE name = $1', [file])) return false;
         await tx.exec(sql);
         await tx.query('INSERT INTO schema_migration (name) VALUES ($1)', [file]);
+        return true;
       });
-      logger.info({ migration: file }, 'applied migration');
+      if (applied) logger.info({ migration: file }, 'applied migration');
     }
+  }
+
+  /** API boot on Postgres: refuse to serve on a schema that is behind the code (B5). */
+  async assertMigrated(): Promise<void> {
+    const pending = await this.pendingMigrations();
+    if (pending.length) throw new Error(`database has pending migrations (${pending.join(', ')}); run the migrate job first`);
   }
 }
 

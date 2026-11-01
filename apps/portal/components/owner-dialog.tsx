@@ -94,7 +94,12 @@ export function OwnerDialog({ unit, mode, onClose }: { unit: UnitDetail; mode: O
         </>
       }
     >
-      {mode === 'change' && unit.owner && <p className="rounded-md bg-warning-bg p-2 text-sm text-warning">{t('owner.changeWarn', { name: unit.owner.fullName ?? '' })}</p>}
+      {mode === 'change' && unit.owner && (
+        <div className="rounded-md bg-warning-bg p-2 text-sm text-warning">
+          <p>{t('owner.changeWarn', { name: unit.owner.fullName ?? '' })}</p>
+          {unit.openRequestCount > 0 && <p className="mt-1">{t('owner.changeMovesRequests', { n: unit.openRequestCount })}</p>}
+        </div>
+      )}
       {mode === 'resend' && <p className="text-sm text-muted">{t('owner.resendNote')} · {t('unit.invitesLeft', { n: unit.invitesRemainingToday ?? 0 })}</p>}
       <Field label={t('owner.fullName')} htmlFor="o-name" error={errors.fullName}>
         <Input id="o-name" dir="auto" maxLength={120} value={name} disabled={mode === 'resend'} onChange={(e) => setName(e.target.value)} />

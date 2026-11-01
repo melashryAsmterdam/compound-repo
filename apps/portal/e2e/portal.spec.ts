@@ -84,6 +84,9 @@ test('admin manages a unit, the resident reports, the admin works the request', 
 
   await page.getByPlaceholder('اكتب تعليقًا للساكن').fill('سيزوركم الفني غدًا');
   await page.getByLabel('إضافة موعد زيارة').check();
+  // Tomorrow in Riyadh: a visit that has already started is refused (QA-06).
+  const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
+  await page.locator('#vdate').fill(tomorrow);
   await page.locator('#vfrom').selectOption('09:00');
   await page.locator('#vto').selectOption('11:00');
   await page.getByRole('button', { name: 'نشر' }).click();
@@ -98,6 +101,23 @@ test('admin manages a unit, the resident reports, the admin works the request', 
   await expect(page.getByText(/بانتظار تأكيد الساكن/).first()).toBeVisible();
   await expect(page.getByText(/يُغلق تلقائيًا في/)).toBeVisible();
   await expect(page.getByPlaceholder('اكتب تعليقًا للساكن')).toBeVisible(); // Done still allows comments
+});
+
+test('requests table fits a tablet and date filters show the Hijri date (QA-08, QA-09)', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await signIn(page);
+  await page.goto('/requests?status=new,in_progress,done,closed,cancelled');
+  const table = page.locator('table');
+  await expect(table).toBeVisible();
+  const box = page.locator('table').locator('..');
+  expect(await box.evaluate((el) => el.scrollWidth <= el.clientWidth), 'table scrolls sideways at 820 px').toBe(true);
+  await expect(page.getByRole('columnheader', { name: 'الإنشاء' })).toBeVisible();
+  const id = page.locator('tbody tr').first().locator('td').first().locator('a');
+  const lineHeight = await id.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+  expect((await id.boundingBox())!.height).toBeLessThan(lineHeight * 1.5); // REQ-00001 on one line
+
+  await page.getByLabel('تاريخ الإنشاء من').fill('2026-11-02');
+  await expect(page.getByText('22 جمادى الأولى 1448 هـ')).toBeVisible();
 });
 
 test('announcement composer shows the audience counter and sends (A5)', async ({ page }) => {

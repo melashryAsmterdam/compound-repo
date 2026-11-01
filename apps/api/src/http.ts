@@ -96,9 +96,9 @@ export class ResidentGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AppRequest>();
+    // Header only (QA-03, B6): a token in the URL ends up in proxy and access logs.
     const auth = req.headers.authorization;
-    const queryToken = typeof req.query.access_token === 'string' && req.path.endsWith('/events/stream') ? req.query.access_token : undefined;
-    const token = auth?.startsWith('Bearer ') ? auth.slice(7) : queryToken;
+    const token = auth?.startsWith('Bearer ') ? auth.slice(7) : undefined;
     if (!token) throw new DomainError('unauthenticated', 401);
     try {
       const { payload } = await jwtVerify(token, this.ctx.jwt.publicKey, {

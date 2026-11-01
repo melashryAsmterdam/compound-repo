@@ -12,7 +12,7 @@ import {
 } from '@compound/domain';
 import { emailText, smsText, type Locale } from '@compound/i18n';
 import type { AppContext } from '../infra/context';
-import { newId } from '../infra/crypto';
+import { derivedToken, newId } from '../infra/crypto';
 import type { Tx } from '../infra/db';
 import { enqueue, type JobRow } from '../infra/jobs';
 import { logger } from '../infra/logger';
@@ -23,6 +23,8 @@ import type { RequestsCore } from '../modules/requests-core';
 const SMS_TEMPLATES = new Set(['request_status_changed_done', 'visit_scheduled', 'visit_rescheduled', 'announcement']);
 
 /** Job consumers and crons (architecture §6–7). */
+export const VISIT_REMINDER_INTERVAL_MS = 5 * 60 * 1000;
+
 export class WorkerHandlers {
   constructor(
     private readonly ctx: AppContext,
@@ -55,8 +57,8 @@ export class WorkerHandlers {
   // ───────── invitations ─────────
 
   async sendInvitation(job: JobRow) {
-    const { invitationId, token } = job.payload;
-    if (!token) return; // already sent; payload wiped
+    const { invitationId } = job.payload;
+    if (!invitationId) return;
     const inv = await this.ctx.db.system((tx) =>
       tx.one<any>(
         `SELECT i.*, p.full_name, p.phone_e164, p.email, u.number, c.name_ar, c.name_en, c.sms_sender_id
@@ -70,6 +72,8 @@ export class WorkerHandlers {
       return this.wipePayload(job.id);
     }
     const locale: Locale = inv.locale;
+    // Re-derived, never stored (B3). Idempotent: a retry sends the same link to any still-queued channel.
+    const token = derivedToken(this.ctx.config.TOKEN_SECRET, 'invitation', invitationId);
     const params = { compound: locale === 'ar' ? inv.name_ar : inv.name_en, unit: inv.number, name: inv.full_name, link: `${this.ctx.config.ACTIVATION_BASE_URL}/a/${token}` };
     const rows = await this.ctx.db.system((tx) => tx.query<any>(`SELECT * FROM message_delivery WHERE invitation_id = $1 AND status = 'queued'`, [invitationId]));
     for (const d of rows) {
@@ -97,14 +101,18 @@ export class WorkerHandlers {
     await this.wipePayload(job.id);
   }
 
+  /** Transactional email by template; the recipient is loaded from its owning row (B3). */
   async sendEmail(job: JobRow) {
-    const { to, subject, text, compoundId } = job.payload;
-    if (!to) return;
-    const { providerMessageId } = await this.ctx.email.send({ to, subject, text });
-    await this.ctx.db.system(async (tx) => {
-      await this.delivery(tx, { compoundId: compoundId ?? null, channel: 'email', destination: to, provider: this.ctx.email.provider, status: 'sent', providerMessageId });
-      await tx.query(`UPDATE job SET payload = '{}' WHERE id = $1`, [job.id]);
-    });
+    const { template, adminUserId, resetId, compoundId } = job.payload;
+    if (template !== 'password_reset' || !adminUserId || !resetId) return;
+    const a = await this.ctx.db.system((tx) => tx.one<any>(`SELECT email, locale FROM admin_user WHERE id = $1 AND status = 'active'`, [adminUserId]));
+    if (!a) return;
+    const token = derivedToken(this.ctx.config.TOKEN_SECRET, 'password_reset', resetId);
+    const t = emailText('password_reset', a.locale, { link: `${this.ctx.config.PORTAL_ORIGIN}/${a.locale}/reset-password?token=${token}` });
+    const { providerMessageId } = await this.ctx.email.send({ to: a.email, subject: t.title, text: t.body });
+    await this.ctx.db.system((tx) =>
+      this.delivery(tx, { compoundId: compoundId ?? null, channel: 'email', destination: a.email, provider: this.ctx.email.provider, status: 'sent', providerMessageId }),
+    );
   }
 
   // ───────── notifications: push + SMS fallback (architecture §6) ─────────
@@ -263,6 +271,7 @@ export class WorkerHandlers {
   }
 
   /** From 20:00 compound time: reminders for visits starting tomorrow (Q-12). */
+  /** Reminders for tomorrow's visits, from 20:00 compound time (A4: "the evening before"). */
   async visitReminders(): Promise<number> {
     const now = this.ctx.now();
     const compounds = await this.ctx.db.system((tx) => tx.query<any>(`SELECT id, timezone FROM compound WHERE status = 'active'`));
@@ -318,7 +327,9 @@ export class WorkerHandlers {
     };
     await once('announcement-dispatch', slot(60_000), () => this.announcements.dispatchDue());
     await once('auto-close', slot(3_600_000), () => this.autoClose());
-    await once('visit-reminders', slot(3_600_000), () => this.visitReminders());
+    // QA-11: every 5 minutes from 20:00, so the reminder lands at 20:00–20:05 and a visit booked later
+    // in the evening for tomorrow still gets one (until 23:55; later bookings just got the visit push).
+    await once('visit-reminders', slot(VISIT_REMINDER_INTERVAL_MS), () => this.visitReminders());
     await once('housekeeping', slot(86_400_000), () => this.housekeeping());
   }
 }

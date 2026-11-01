@@ -138,6 +138,12 @@ export const touchTarget = source.touchTarget;
 export const pattern = source.pattern;
 export const brand = source.brand;
 
+/**
+ * The Saha mark (Designer's export, unchanged; also assets/saha-mark.svg). PNGs for the Expo icon
+ * and splash: `@compound/ui-tokens/assets/saha-mark-1024.png`, `…/assets/saha-icon-1024.png`.
+ */
+export const markSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#006C35"/>\n  <g fill="#fff"><rect x="14" y="14" width="15" height="15" rx="3"/><rect x="35" y="14" width="15" height="15" rx="3"/><rect x="14" y="35" width="15" height="15" rx="3"/><rect x="35" y="35" width="15" height="15" rx="3"/></g>\n  <circle cx="32" cy="32" r="4.5" fill="#C9A85A"/></svg>';
+
 export const tokens = { version: TOKENS_VERSION, color, font, space, radius, elevation, touchTarget, pattern, brand };
 
 const kebab = (s: string) => s.replace(/_/g, '-').replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());

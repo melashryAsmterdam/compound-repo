@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { color, contrastRatio, cssVariables, source, toCss, tokens, TOKENS_VERSION } from '../src/index.js';
+import { color, contrastRatio, markSvg, cssVariables, source, toCss, tokens, TOKENS_VERSION } from '../src/index.js';
 
 const json = JSON.parse(readFileSync(new URL('../saha-ui-tokens-v0.1.2.json', import.meta.url), 'utf8'));
 
@@ -53,5 +53,11 @@ describe('ui-tokens', () => {
     const onDisk = readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
     expect(onDisk, 'run pnpm --filter @compound/ui-tokens gen:css').toBe(toCss());
     expect(tokens.version).toBe('0.1.2');
+  });
+
+  it('ships the Designer\'s mark unchanged', () => {
+    expect(markSvg).toBe(readFileSync(new URL('../assets/saha-mark.svg', import.meta.url), 'utf8').trim());
+    expect(markSvg).toContain(color.green[600]);
+    expect(markSvg).toContain(color.accent.goldMark);
   });
 });

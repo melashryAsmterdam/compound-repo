@@ -150,6 +150,7 @@ export class ResidentAuthController {
         block: inv.block,
         otpChannel: channel,
         maskedDestination: maskDestination(channel === 'sms' ? inv.phone_e164 : inv.email),
+        compoundPhone: inv.contact_phone ?? null, // contract v1.1 (QA-07)
         privacyNoticeVersion: LEGAL_VERSIONS.privacy_notice,
         termsVersion: LEGAL_VERSIONS.terms,
       };
@@ -196,21 +197,32 @@ export class ResidentAuthController {
     const now = this.ctx.now();
     // OTP is verified (and consumed) first so wrong attempts are counted even when the call fails.
     const ch = await this.otp.verify(input.challengeId, input.code, ['activation']);
-    // One system transaction: activation can span several compounds (Q-2), and must be atomic.
-    return this.ctx.db.system(async (tx) => {
-      const personId = ch.subjectId!;
-      const pending = await tx.query<any>(
+    const personId = ch.subjectId!;
+    // Architect decision 6 (build review 2026-11-01): global rows first in one system() step — the
+    // pending lookup cannot know the compound yet — then one tenant() transaction per assignment,
+    // each idempotent on its invitation. A partial failure leaves activated units active and the
+    // rest pending, so the resident can retry with a new code.
+    const { pending, deviceId } = await this.ctx.db.system(async (tx) => {
+      const rows = await tx.query<any>(
         `SELECT i.id AS invitation_id, i.compound_id, ua.id AS assignment_id, ua.unit_id FROM unit_assignment ua
            JOIN invitation i ON i.assignment_id = ua.id AND i.used_at IS NULL AND i.superseded_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > $2
           WHERE ua.person_id = $1 AND ua.status = 'invited'`,
         [personId, now],
       );
-      if (pending.length === 0) throw new DomainError('invitation_expired', 410);
-      const deviceId = await this.sessions.upsertDevice(tx, personId, input.device);
+      if (rows.length === 0) throw new DomainError('invitation_expired', 410);
+      const device = await this.sessions.upsertDevice(tx, personId, input.device);
       await tx.query(`UPDATE person SET locale = $2, updated_at = now() WHERE id = $1`, [personId, input.consent.locale]);
-      for (const p of pending) {
-        await tx.query(`UPDATE invitation SET used_at = $2 WHERE id = $1`, [p.invitation_id, now]);
-        await tx.query(`UPDATE unit_assignment SET status = 'active', activated_at = $2 WHERE id = $1`, [p.assignment_id, now]);
+      return { pending: rows, deviceId: device };
+    });
+    let activated = 0;
+    for (const p of pending) {
+      const ok = await this.ctx.db.tenant({ compoundId: p.compound_id, personId }, async (tx) => {
+        const used = await tx.query(
+          `UPDATE invitation SET used_at = $2 WHERE id = $1 AND used_at IS NULL AND superseded_at IS NULL AND revoked_at IS NULL AND expires_at > $2 RETURNING id`,
+          [p.invitation_id, now],
+        );
+        if (used.length === 0) return false;
+        await tx.query(`UPDATE unit_assignment SET status = 'active', activated_at = $2 WHERE id = $1 AND status = 'invited'`, [p.assignment_id, now]);
         const hasConsent = await tx.one(`SELECT 1 FROM consent_record WHERE person_id = $1 AND compound_id = $2 AND version = $3 AND document = 'privacy_notice' AND withdrawn_at IS NULL`, [personId, p.compound_id, LEGAL_VERSIONS.privacy_notice]);
         if (!hasConsent) {
           for (const [doc, version] of [['privacy_notice', LEGAL_VERSIONS.privacy_notice], ['terms', LEGAL_VERSIONS.terms]] as const) {
@@ -222,9 +234,12 @@ export class ResidentAuthController {
         }
         await audit(tx, { compoundId: p.compound_id, actorType: 'resident', actorId: personId, action: 'assignment.activate', entityType: 'unit_assignment', entityId: p.assignment_id, ...meta });
         await tx.notify('events', { compoundId: p.compound_id, admins: true, personIds: [], type: 'invitation.updated', entityId: p.unit_id });
-      }
-      return this.sessions.issue(tx, personId, deviceId);
-    });
+        return true;
+      });
+      if (ok) activated++;
+    }
+    if (activated === 0) throw new DomainError('invitation_expired', 410);
+    return this.ctx.db.system((tx) => this.sessions.issue(tx, personId, deviceId));
   }
 
   @Get('legal/:document')

@@ -16,6 +16,14 @@ export const randomToken = () => randomBytes(32).toString('base64url');
 export const otpCode = () => String(randomInt(0, 1_000_000)).padStart(6, '0');
 export const hmac = (key: string, s: string) => createHmac('sha256', key).update(s).digest();
 
+/**
+ * Link token derived from a server secret and a row id (B3): 43-char base64url like randomToken(),
+ * but the worker can recompute it at send time, so the raw token is never stored (DB or job
+ * payload). Only sha256(token) is persisted.
+ */
+export const derivedToken = (secret: string, purpose: 'invitation' | 'password_reset', id: string) =>
+  hmac(secret, `${purpose}:${id}`).toString('base64url');
+
 export function safeEqual(a: Buffer | Uint8Array, b: Buffer | Uint8Array): boolean {
   const x = Buffer.from(a);
   const y = Buffer.from(b);

@@ -9,7 +9,7 @@ import { CategoryLabel, OutcomeBadge, StatusChip } from '@/components/request-bi
 import { StatusDialog } from '@/components/status-dialog';
 import { Bdi, Button, Card, Checkbox, Dialog, ErrorPanel, Field, Input, Select, Skeleton, Textarea, useToast } from '@/components/ui';
 import { ApiError, del, get, patch, post, qs, type AdminRequestDetail, type AdminRequestSummary, type RequestEvent } from '@/lib/api';
-import { formatDual, fullDate, riyadhToday, visitWindow } from '@/lib/format';
+import { formatDual, fullDate, hijriOf, riyadhToday, visitWindow } from '@/lib/format';
 import { useErrorText, useI18n } from '@/lib/i18n';
 import { useLive } from '@/lib/live';
 
@@ -158,7 +158,7 @@ function Composer({ r, onPosted, onPosting, openVisit }: { r: AdminRequestDetail
     );
 
   const visitInvalid = visitOn && to <= from;
-  const hijri = date ? formatDual(`${date}T09:00:00Z`, locale).hijri : '';
+  const hijri = hijriOf(date, locale);
 
   async function submit() {
     onPosting();
