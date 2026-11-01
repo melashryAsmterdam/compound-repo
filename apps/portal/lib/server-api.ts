@@ -1,6 +1,7 @@
 import 'server-only';
+import { apiUrl } from './env';
 
-const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+const API_URL = apiUrl();
 
 /** Server-side call to the API for public pages (activation landing). */
 export async function serverGet<T>(path: string, locale: string): Promise<{ ok: true; data: T } | { ok: false; status: number; body: any }> {

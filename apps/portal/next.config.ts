@@ -1,9 +1,11 @@
 import type { NextConfig } from 'next';
+import { apiUrl } from './lib/env';
 
-const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+const API_URL = apiUrl();
 
 const config: NextConfig = {
-  output: 'standalone',
+  // Standalone output is for the container build (Cloud Run); Vercel packages the app itself.
+  output: process.env.VERCEL ? undefined : 'standalone',
   poweredByHeader: false,
   transpilePackages: ['@compound/i18n', '@compound/domain', '@compound/api-client'],
   // The browser talks to the API through the portal origin, so the session cookie stays first-party.
