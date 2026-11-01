@@ -1,0 +1,79 @@
+@import 'tailwindcss';
+
+@import '@compound/ui-tokens/tokens.css';
+
+/*
+ * Saha design tokens v0.1.1 from packages/ui-tokens, mapped to the portal's Tailwind names.
+ * Change values in the tokens package, never here. The compound's own name and logo own the header
+ * (tokens brand rules); green marks the single primary action.
+ */
+@theme inline {
+  --font-sans: var(--font-plex-arabic), system-ui, sans-serif;
+  --color-surface: var(--saha-white);
+  --color-canvas: var(--saha-background);
+  --color-line: var(--saha-line);
+  --color-ink: var(--saha-text);
+  --color-muted: var(--saha-text-muted);
+  --color-faint: var(--saha-text-faint);
+  --color-accent: var(--saha-primary);
+  --color-accent-hover: var(--saha-primary-hover);
+  --color-accent-ink: var(--saha-primary-ink);
+  --color-accent-soft: var(--saha-primary-soft);
+  --color-disabled: var(--saha-disabled);
+  --color-info: var(--saha-info);
+  --color-info-bg: var(--saha-info-bg);
+  --color-warning: var(--saha-warning);
+  --color-warning-bg: var(--saha-warning-bg);
+  --color-success: var(--saha-success);
+  --color-success-bg: var(--saha-success-bg);
+  --color-danger: var(--saha-danger);
+  --color-danger-bg: var(--saha-danger-bg);
+  --color-neutral: var(--saha-neutral);
+  --color-neutral-bg: var(--saha-neutral-bg);
+  --color-visit: var(--saha-visit-card);
+  --color-gold: var(--saha-gold);
+
+  /* Request status badges (tokens color.status). */
+  --color-status-new: var(--saha-status-new-fg);
+  --color-status-new-bg: var(--saha-status-new-bg);
+  --color-status-in-progress: var(--saha-status-in-progress-fg);
+  --color-status-in-progress-bg: var(--saha-status-in-progress-bg);
+  --color-status-done: var(--saha-status-done-fg);
+  --color-status-done-border: var(--saha-status-done-border);
+  --color-status-closed: var(--saha-status-closed-fg);
+  --color-status-closed-bg: var(--saha-status-closed-bg);
+  --color-status-cancelled: var(--saha-status-cancelled-fg);
+  --color-status-cancelled-bg: var(--saha-status-cancelled-bg);
+  --color-status-reopened: var(--saha-status-reopened-fg);
+  --color-status-reopened-bg: var(--saha-status-reopened-bg);
+
+  --radius-sm: var(--saha-radius-sm);
+  --radius-md: var(--saha-radius-md);
+  --radius-lg: var(--saha-radius-lg);
+  --radius-xl: var(--saha-radius-xl);
+  --shadow-sm: var(--saha-shadow-card);
+  --shadow-lg: var(--saha-shadow-overlay);
+}
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+body {
+  font-family: var(--font-sans);
+  font-size: var(--saha-font-size-body);
+  line-height: var(--saha-line-height-latin);
+}
+html[lang='ar'] body {
+  line-height: var(--saha-line-height-arabic);
+  letter-spacing: 0;
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+/* IDs, unit numbers, phones, OTPs: always LTR inside Arabic (spec §1.1). */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

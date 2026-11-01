@@ -1,0 +1,26 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # turbo builds each package's dependencies first (dependsOn ^build), so a fresh checkout
+      # needs no manual pre-build step (QA-12).
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Generated client must match the contract
+        run: git diff --exit-code packages/api-client/src/schema.d.ts
+      - name: Unit + integration tests (domain 100% branches; API on PGlite with RLS; contract coverage)
+        run: pnpm test
+      - name: Build API and portal
+        run: pnpm build
+      - name: Portal ar/en RTL smoke
+        run: pnpm --filter @compound/portal exec playwright install --with-deps chromium && pnpm --filter @compound/portal e2e
