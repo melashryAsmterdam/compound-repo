@@ -1,7 +1,15 @@
 node_modules/
 dist/
+.next/
 .turbo/
+.vercel/
 coverage/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
+.data/
+**/e2e/.auth
+**/test-results
+**/playwright-report
+next-env.d.ts

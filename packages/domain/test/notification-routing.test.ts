@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACK_WAIT_MS, isQuietHour, planSmsFallback } from '../src/index.js';
+import { ACK_WAIT_MS, isQuietHour, planSmsFallback } from '../src/index';
 
 const RIYADH = 180;
 // 10:00 Riyadh = 07:00Z

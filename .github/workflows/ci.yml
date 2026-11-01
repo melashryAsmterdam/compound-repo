@@ -1,0 +1,26 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # QA-12: tests must pass on a fresh checkout, before anything is built.
+      - name: Unit + integration tests on a clean tree (domain 100% branches; API on PGlite with RLS)
+        run: pnpm -r test
+      - name: Contract lint
+        run: pnpm lint:contract
+      - name: Build everything (generates the API client from the contract)
+        run: pnpm build
+      - name: Generated client must match the contract
+        run: git diff --exit-code packages/api-client/src/schema.d.ts
+      - run: pnpm typecheck
+      - name: Portal ar/en RTL smoke
+        run: pnpm --filter @compound/portal exec playwright install --with-deps chromium && pnpm --filter @compound/portal e2e

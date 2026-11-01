@@ -4,3 +4,11 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - '@nestjs/core'
+allowBuilds:
+  esbuild: true
+  '@nestjs/core': true
+  '@swc/core': true
+  sharp: true
+  unrs-resolver: true
+  '@scarf/scarf': false
+  '@parcel/watcher': false

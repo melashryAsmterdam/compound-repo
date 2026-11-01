@@ -1,11 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "noEmit": true
-  },
+  "compilerOptions": { "module": "Node16", "moduleResolution": "Node16", "outDir": "dist", "rootDir": ".", "noUncheckedIndexedAccess": false, "types": ["node"] },
   "include": ["src", "test"]
 }
