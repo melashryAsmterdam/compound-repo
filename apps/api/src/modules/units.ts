@@ -284,6 +284,22 @@ export class UnitsController {
         return;
       }
       if (current) await this.revokeAssignment(tx, current, a.id, unit, now, req);
+      // QA-10 (owner decision, option c): the old owner's open requests move to the new owner, who sees
+      // them once activated. Closed and cancelled requests stay with the old owner in the unit history.
+      const moved = current
+        ? await tx.query<{ id: string }>(
+            `UPDATE request SET created_by_person_id = $3, version = version + 1, updated_at = $4
+              WHERE unit_id = $1 AND created_by_person_id = $2 AND status IN ('new','in_progress','done') RETURNING id`,
+            [unitId, current.person_id, person.id, now],
+          )
+        : [];
+      if (moved.length) {
+        await audit(tx, {
+          compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action: 'requests.transfer', entityType: 'unit', entityId: unitId,
+          changes: { requests: [null, moved.map((r) => r.id)], reason: [null, 'owner_change'] }, ...clientMeta(req),
+        });
+        for (const r of moved) await publish(tx, { compoundId: a.compoundId, admins: true, personIds: [], type: 'request.updated', entityId: r.id });
+      }
       const assignmentId = newId();
       await tx.query(
         `INSERT INTO unit_assignment (id, compound_id, unit_id, person_id, role, status, assigned_by, created_at) VALUES ($1,$2,$3,$4,'owner','invited',$5,$6)`,

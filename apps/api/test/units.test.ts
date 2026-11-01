@@ -165,7 +165,8 @@ describe('A2 owner & invitations', () => {
     await admin.put(`/admin/v1/units/${unitId}/owner`, { fullName: 'New Owner', phone: nextPhone() }).expect(200);
     const denied = await resident.get(`/app/v1/units/${unitId}/requests`).expect(403);
     expect(denied.body.code).toBe('unit_access_revoked');
-    await resident.get(`/app/v1/requests/${req.body.id}`).expect(403);
+    // QA-10: the open request moved to the new owner, so for the old owner it no longer exists.
+    await resident.get(`/app/v1/requests/${req.body.id}`).expect(404);
     const refresh = await env.http.post('/app/v1/auth/refresh').send({ refreshToken: resident.refresh }).expect(401);
     expect(refresh.body.code).toBe('session_revoked');
 
