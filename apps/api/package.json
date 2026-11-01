@@ -7,6 +7,7 @@
     "build": "tsc -p tsconfig.build.json && mkdir -p dist/infra/migrations && cp src/infra/migrations/*.sql dist/infra/migrations/",
     "typecheck": "tsc --noEmit --noUnusedLocals",
     "start": "node dist/main.js",
+    "migrate": "node dist/migrate.js",
     "dev": "pnpm build && node dist/main.js",
     "worker": "WORKER=1 node dist/main.js",
     "seed": "node dist/seed.js",

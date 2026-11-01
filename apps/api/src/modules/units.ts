@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { DomainError, notFound } from '../errors';
 import { AppContext } from '../infra/context';
 import { audit } from '../infra/audit';
-import { newId, randomToken, sha256 } from '../infra/crypto';
+import { derivedToken, newId, sha256 } from '../infra/crypto';
 import type { Tx } from '../infra/db';
 import { enqueue } from '../infra/jobs';
 import { publish } from '../infra/realtime';
@@ -370,7 +370,7 @@ export class UnitsController {
       if (recent!.n >= INVITES_PER_UNIT_PER_DAY) throw new DomainError('invite_limit_reached', 429);
       await tx.query(`UPDATE invitation SET superseded_at = $2 WHERE assignment_id = $1 AND used_at IS NULL AND superseded_at IS NULL AND revoked_at IS NULL`, [asg.id, now]);
       const id = newId();
-      const token = randomToken();
+      const token = derivedToken(this.ctx.config.TOKEN_SECRET, 'invitation', id);
       await tx.query(
         `INSERT INTO invitation (id, compound_id, assignment_id, token_hash, channels, locale, expires_at, created_by, created_at)
          VALUES ($1,$2,$3,$4,$5::channel[],$6,$7,$8,$9)`,
@@ -383,8 +383,8 @@ export class UnitsController {
           [newId(), a.compoundId, id, ch, dest, ch === 'sms' ? this.ctx.sms.provider : this.ctx.email.provider],
         );
       }
-      // The raw token lives only in this job's payload until the worker sends it, then the payload is wiped.
-      await enqueue(tx, 'send-invitation', { invitationId: id, compoundId: a.compoundId, token });
+      // IDs only (B3): the worker re-derives the link token from TOKEN_SECRET at send time.
+      await enqueue(tx, 'send-invitation', { invitationId: id, compoundId: a.compoundId });
       await audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action: 'invitation.send', entityType: 'invitation', entityId: id, changes: { channels: [null, channels] }, ...clientMeta(req) });
       await publish(tx, { compoundId: a.compoundId, admins: true, personIds: [], type: 'invitation.updated', entityId: unitId });
       const row = await tx.one<any>(`SELECT i.*, ad.full_name AS created_by_name FROM invitation i LEFT JOIN admin_user ad ON ad.id = i.created_by WHERE i.id = $1`, [id]);

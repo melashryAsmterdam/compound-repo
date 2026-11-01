@@ -20,7 +20,7 @@ The portal (`apps/portal`, Next.js 16) deploys to Vercel as its own project. The
 |---|---|---|---|---|
 | `API_URL` | **Yes** | Production, Preview | `https://api.example.sa` | Base URL of the shared API, no trailing slash. The browser calls `/api/*` and `/_storage/*` on the portal's own domain and Vercel proxies them here, so the admin session cookie stays first-party. Read at **build time** (rewrites) and at runtime (activation page). The build fails if it is missing on Vercel, and production requires `https`. |
 | `APP_STORE_URL` | No | Production | `https://apps.apple.com/sa/app/…` | iOS store link on the activation page (W-01). Defaults to the App Store home. |
-| `PLAY_STORE_URL` | No | Production | `https://play.google.com/store/apps/details?id=sa.compound.app` | Android store link on the activation page. Defaults to the Play home. |
+| `PLAY_STORE_URL` | No | Production | `https://play.google.com/store/apps/details?id=sa.compound.app` | Android listing on the activation page; default is the one shown. The page appends `referrer=activation_token%3D<token>` so activation continues after install (ADR-009). |
 
 No secrets live in the portal; every secret stays with the API.
 

@@ -26,9 +26,9 @@ export function templateKey(type: string, params: Record<string, unknown>): stri
 }
 
 export function deepLink(n: { request_id?: string | null; announcement_id?: string | null }): string {
-  if (n.request_id) return `compound://requests/${n.request_id}`;
-  if (n.announcement_id) return `compound://announcements/${n.announcement_id}`;
-  return 'compound://notifications';
+  if (n.request_id) return `compoundapp://requests/${n.request_id}`;
+  if (n.announcement_id) return `compoundapp://announcements/${n.announcement_id}`;
+  return 'compoundapp://notifications';
 }
 
 /** Notification rows are the in-app list (R5-AC2) and the delivery outbox (architecture §6). */

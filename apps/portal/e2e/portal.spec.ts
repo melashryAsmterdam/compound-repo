@@ -84,6 +84,9 @@ test('admin manages a unit, the resident reports, the admin works the request', 
 
   await page.getByPlaceholder('اكتب تعليقًا للساكن').fill('سيزوركم الفني غدًا');
   await page.getByLabel('إضافة موعد زيارة').check();
+  // Tomorrow in Riyadh: a visit that has already started is refused (QA-06).
+  const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
+  await page.locator('#vdate').fill(tomorrow);
   await page.locator('#vfrom').selectOption('09:00');
   await page.locator('#vto').selectOption('11:00');
   await page.getByRole('button', { name: 'نشر' }).click();

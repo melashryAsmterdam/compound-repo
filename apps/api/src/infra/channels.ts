@@ -37,13 +37,15 @@ export class ConsoleChannels {
   /** Tokens that should behave as unregistered (tests). */
   readonly deadTokens = new Set<string>();
 
+  /** logText: development opt-in (LOG_MESSAGE_TEXT=1). Message text carries OTPs and activation links. */
+  constructor(private readonly opts: { logText?: boolean } = {}) {}
+
   private record(m: Omit<SentMessage, 'providerMessageId' | 'at'>) {
     const providerMessageId = newId();
     this.outbox.push({ ...m, providerMessageId, at: new Date() });
-    if (process.env.NODE_ENV !== 'test') {
-      // Local only: full text so a developer can copy OTPs and links. Destination is masked.
-      logger.info({ channel: m.channel, to: maskDestination(m.to) }, `[${m.channel}] ${m.subject ? m.subject + ' — ' : ''}${m.text}`);
-    }
+    const to = m.channel === 'push' ? '[device]' : maskDestination(m.to);
+    if (this.opts.logText) logger.info({ channel: m.channel, to }, `[${m.channel}] ${m.subject ? m.subject + ' — ' : ''}${m.text}`);
+    else logger.info({ channel: m.channel, to, providerMessageId, chars: m.text.length }, `[${m.channel}] message sent (text not logged)`);
     return providerMessageId;
   }
 

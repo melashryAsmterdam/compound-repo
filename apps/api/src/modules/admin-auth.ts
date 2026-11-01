@@ -1,12 +1,11 @@
 import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { hash as argonHash, verify as argonVerify } from '@node-rs/argon2';
-import { emailText } from '@compound/i18n';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { DomainError } from '../errors';
 import { AppContext } from '../infra/context';
 import { audit } from '../infra/audit';
-import { hmac, randomToken, sha256 } from '../infra/crypto';
+import { derivedToken, hmac, newId, randomToken, sha256 } from '../infra/crypto';
 import { enqueue } from '../infra/jobs';
 import { hit } from '../infra/ratelimit';
 import { ADMIN_COOKIE, AdminGuard, admin, clientMeta, localeOf, parse, type AppRequest } from '../http';
@@ -135,13 +134,13 @@ export class AdminAuthController {
       return tx.one<any>(`SELECT id, compound_id, locale, email FROM admin_user WHERE email = $1 AND status = 'active'`, [email]);
     });
     if (!a) return;
-    const token = randomToken();
+    const resetId = newId();
+    const token = derivedToken(this.ctx.config.TOKEN_SECRET, 'password_reset', resetId);
     await this.ctx.db.system(async (tx) => {
       await tx.query(`INSERT INTO password_reset (token_hash, admin_user_id, expires_at) VALUES ($1,$2,$3)`, [sha256(token), a.id, new Date(now.getTime() + RESET_TTL_MS)]);
-      const link = `${this.ctx.config.PORTAL_ORIGIN}/${a.locale}/reset-password?token=${token}`;
-      const t = emailText('password_reset', a.locale, { link });
-      // Token travels only in the email body; the job payload is deleted after send.
-      await enqueue(tx, 'send-email', { to: a.email, subject: t.title, text: t.body, compoundId: a.compound_id });
+      // IDs only (B3): no address, body or token at rest in the job table. The worker loads the
+      // recipient from admin_user and re-derives the link.
+      await enqueue(tx, 'send-email', { template: 'password_reset', adminUserId: a.id, resetId, compoundId: a.compound_id });
     });
   }
 
