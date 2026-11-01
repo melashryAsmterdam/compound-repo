@@ -9,7 +9,7 @@ import { AdminGuard, ResidentGuard } from './http';
 import { AppContext } from './infra/context';
 import { AdminAuthController } from './modules/admin-auth';
 import { AdminAnnouncementsController, AnnouncementsService, AppAnnouncementsController } from './modules/announcements';
-import { AdminMiscController, AppCategoriesController, HealthController, StreamsController, UploadsController, WebhooksController } from './modules/misc';
+import { AdminMiscController, AppCategoriesController, AppMetaController, AppVersionGuard, HealthController, StreamsController, UploadsController, WebhooksController } from './modules/misc';
 import { AppNotificationsController, NotificationsService } from './modules/notifications';
 import { OtpService } from './modules/otp';
 import { AdminRequestsController, AdminRequestsService } from './modules/requests-admin';
@@ -39,6 +39,7 @@ class ApiModule {
         AppRequestsController,
         AppAnnouncementsController,
         AppNotificationsController,
+        AppMetaController,
       ],
       providers: [
         { provide: AppContext, useValue: ctx },
@@ -68,7 +69,8 @@ export async function buildApp(config: Config = loadConfig()): Promise<Built> {
   app.use(cookieParser());
   app.use(json({ limit: '100kb', type: ['application/json', 'application/*+json'] }));
   app.useGlobalFilters(new ProblemFilter());
-  app.enableCors({ origin: [config.PORTAL_ORIGIN], credentials: true, allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'Accept-Language', 'Authorization', 'Idempotency-Key'], exposedHeaders: ['X-CSRF-Token'] });
+  app.useGlobalGuards(new AppVersionGuard(ctx));
+  app.enableCors({ origin: [config.PORTAL_ORIGIN], credentials: true, allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'Accept-Language', 'Authorization', 'Idempotency-Key', 'X-App-Version'], exposedHeaders: ['X-CSRF-Token'] });
   const express = app.getHttpAdapter().getInstance();
   express.set('trust proxy', true);
   express.disable('x-powered-by');

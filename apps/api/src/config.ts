@@ -31,6 +31,11 @@ const schema = z.object({
    * in development (QA-02, B2). Default: metadata only.
    */
   LOG_MESSAGE_TEXT: z.enum(['0', '1']).default('0'),
+  /** GET /app/v1/meta and the 426 app_update_required check (contract v1.1). */
+  APP_MIN_VERSION_IOS: z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
+  APP_MIN_VERSION_ANDROID: z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
+  APP_LATEST_VERSION_IOS: z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
+  APP_LATEST_VERSION_ANDROID: z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
   /** Per-IP limits (05-auth). Raised only in tests where every call comes from 127.0.0.1. */
   OTP_IP_HOURLY_LIMIT: z.coerce.number().int().default(10),
   OTP_DEST_HOURLY_LIMIT: z.coerce.number().int().default(5),

@@ -187,6 +187,25 @@ export class UnitsController {
     });
   }
 
+  /** Contract v1.1: counters for the Units page header (replaces six count calls). */
+  @Get('summary')
+  async summary(@Req() req: AppRequest) {
+    const now = this.ctx.now();
+    return this.tenant(req, async (tx) => {
+      const r = await tx.one<any>(
+        `SELECT count(*)::int AS total,
+                count(*) FILTER (WHERE x.status = 'active')::int AS active,
+                count(*) FILTER (WHERE x.status = 'inactive')::int AS inactive,
+                count(*) FILTER (WHERE x.assignment_status = 'active')::int AS assigned,
+                count(*) FILTER (WHERE x.person_id IS NULL)::int AS unassigned,
+                count(*) FILTER (WHERE x.activation = 'invited')::int AS pending_invitations
+           FROM (${UNIT_SELECT.replaceAll('$NOW', '$1')}) x`,
+        [now],
+      );
+      return { total: r.total, active: r.active, inactive: r.inactive, assigned: r.assigned, unassigned: r.unassigned, pendingInvitations: r.pending_invitations };
+    });
+  }
+
   @Get(':unitId')
   get(@Req() req: AppRequest, @Param('unitId', ParseUUIDPipe) unitId: string) {
     return this.detail(req, unitId);

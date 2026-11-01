@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { hash as argonHash, verify as argonVerify } from '@node-rs/argon2';
 import type { Response } from 'express';
 import { z } from 'zod';
@@ -28,6 +28,8 @@ const loginBody = z.object({ email: z.string().email().max(254), password: z.str
 const mfaBody = z.object({ challengeId: z.string().uuid(), code: z.string().regex(/^[0-9]{6}$/) });
 const resendBody = z.object({ challengeId: z.string().uuid() });
 const forgotBody = z.object({ email: z.string().email().max(254) });
+const localeBody = z.object({ locale: z.enum(['ar', 'en']) });
+const changePasswordBody = z.object({ currentPassword: z.string().min(1).max(128), newPassword: z.string().min(12, 'password_too_weak').max(128) });
 const resetBody = z.object({ token: z.string().min(10).max(100), newPassword: z.string().min(12, 'password_too_weak').max(128) });
 
 @Controller('admin/v1')
@@ -173,6 +175,41 @@ export class AdminAuthController {
     // Contract addition (open question to Architect): lets the portal recover the CSRF token after reload.
     res.setHeader('X-CSRF-Token', this.csrfFor(req.cookies[ADMIN_COOKIE]));
     return this.me(a.id, a.compoundId);
+  }
+
+  /** Contract v1.1: the admin's own portal language. */
+  @Patch('me')
+  @UseGuards(AdminGuard)
+  async patchMe(@Req() req: AppRequest, @Body() body: unknown) {
+    const { locale } = parse(localeBody, body);
+    const a = admin(req);
+    await this.ctx.db.tenant({ compoundId: a.compoundId }, async (tx) => {
+      await tx.query(`UPDATE admin_user SET locale = $2, updated_at = $3 WHERE id = $1`, [a.id, locale, this.ctx.now()]);
+      await audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action: 'admin.locale', entityType: 'admin_user', entityId: a.id, changes: { locale: [a.locale, locale] }, ...clientMeta(req) });
+    });
+    return this.me(a.id, a.compoundId);
+  }
+
+  /** Contract v1.1: change own password; every other session of this admin is revoked, this one kept. */
+  @Post('me/password')
+  @HttpCode(204)
+  @UseGuards(AdminGuard)
+  async changePassword(@Req() req: AppRequest, @Body() body: unknown) {
+    const { currentPassword, newPassword } = parse(changePasswordBody, body);
+    const a = admin(req);
+    const now = this.ctx.now();
+    await this.ctx.db.system((tx) => hit(tx, `pwchange:${a.id}`, 5, 15 * 60 * 1000, 'rate_limited', now));
+    const row = await this.ctx.db.system((tx) => tx.one<any>(`SELECT password_hash FROM admin_user WHERE id = $1`, [a.id]));
+    if (!row || !(await argonVerify(row.password_hash, currentPassword).catch(() => false))) throw new DomainError('current_password_invalid', 400);
+    if (BREACHED.has(newPassword.toLowerCase())) throw new DomainError('password_too_weak', 422);
+    const hashed = await hashPassword(newPassword);
+    await this.ctx.db.system(async (tx) => {
+      await tx.query(`UPDATE admin_user SET password_hash = $2, updated_at = $3 WHERE id = $1`, [a.id, hashed, now]);
+      await tx.query(`UPDATE admin_session SET revoked_at = $3 WHERE admin_user_id = $1 AND id_hash <> $2 AND revoked_at IS NULL`, [a.id, a.sessionHash, now]);
+    });
+    await this.ctx.db.tenant({ compoundId: a.compoundId }, (tx) =>
+      audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action: 'admin.password_change', entityType: 'admin_user', entityId: a.id, ...clientMeta(req) }),
+    );
   }
 
   private async me(adminId: string, compoundId: string) {

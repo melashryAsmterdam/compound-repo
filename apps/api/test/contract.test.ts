@@ -25,11 +25,7 @@ describe('API contract coverage', () => {
       for (const m of Object.keys(layer.route.methods)) implemented.add(`${m.toUpperCase()} ${String(layer.route.path).replace(/:[A-Za-z]+/g, ':p')}`);
     }
     const internal = new Set(['PUT /_storage/:p', 'GET /_storage/:p']);
-    // Contract v1.1 (Architect, 2026-11-01) operations not built yet — tracked as follow-up work.
-    // Remove each one here when it is implemented; the test fails if this list goes stale.
-    const pendingV11 = ['PATCH /admin/v1/me', 'POST /admin/v1/me/password', 'GET /admin/v1/units/summary', 'GET /app/v1/meta'];
-    for (const op of pendingV11) expect(implemented.has(op), `${op} is implemented: drop it from pendingV11`).toBe(false);
-    const missing = [...contract].filter((op) => !implemented.has(op) && !pendingV11.includes(op));
+    const missing = [...contract].filter((op) => !implemented.has(op));
     const extra = [...implemented].filter((op) => !contract.has(op) && !internal.has(op));
     expect({ missing, extra }).toEqual({ missing: [], extra: [] });
     expect(contract.size).toBeGreaterThan(60);
