@@ -1,6 +1,11 @@
 packages:
   - apps/*
   - packages/*
-onlyBuiltDependencies:
-  - esbuild
-  - '@nestjs/core'
+# pnpm 11+ ignores onlyBuiltDependencies; without this list a fresh `pnpm install` stops with
+# ERR_PNPM_IGNORED_BUILDS (QA-12). false = known and deliberately not run.
+allowBuilds:
+  esbuild: true
+  '@nestjs/core': true
+  '@swc/core': true
+  sharp: true
+  '@scarf/scarf': false

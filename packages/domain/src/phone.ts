@@ -29,3 +29,18 @@ export function normalise(input: string): string {
 export function mask(e164: string): string {
   return e164.slice(0, 5) + '•'.repeat(Math.max(0, e164.length - 8)) + e164.slice(-3);
 }
+
+/** Form-field variant of `normalise`: E.164 for a valid Saudi mobile, otherwise null (no throw). */
+export function normaliseSaudiMobile(input: string): string | null {
+  try {
+    return normalise(input);
+  } catch {
+    return null;
+  }
+}
+
+/** Masked e-mail for lists and logs: noura@gmail.com → n***@gmail.com. */
+export function maskEmail(email: string): string {
+  const at = email.indexOf('@');
+  return at < 1 ? '***' : `${email[0]}***${email.slice(at)}`;
+}

@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+/*
+ * Placeholder design tokens. packages/ui-tokens (from design) replaces these;
+ * neutral on purpose: the portal carries the compound's own name and logo (spec §1.8).
+ */
+@theme {
+  --font-sans: var(--font-plex-arabic), system-ui, sans-serif;
+  --color-surface: #ffffff;
+  --color-canvas: #f6f7f9;
+  --color-line: #e3e6ea;
+  --color-ink: #1d2329;
+  --color-muted: #5b6672;
+  --color-accent: #1f5f8b;
+  --color-accent-ink: #ffffff;
+  --color-info: #1f5f8b;
+  --color-info-bg: #e7f0f7;
+  --color-warning: #8a5300;
+  --color-warning-bg: #fdf1dc;
+  --color-success: #1e6b3a;
+  --color-success-bg: #e5f4ea;
+  --color-danger: #a12a2a;
+  --color-danger-bg: #fbe9e9;
+}
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+body {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+html[lang='ar'] body {
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+/* IDs, unit numbers, phones, OTPs: always LTR inside Arabic (spec §1.1). */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

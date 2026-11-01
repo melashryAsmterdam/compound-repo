@@ -5,3 +5,10 @@ coverage/
 .env
 .env.*
 !.env.example
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.vercel/
+apps/portal/e2e/.auth/
+apps/portal/test-results/
+apps/portal/playwright-report/
