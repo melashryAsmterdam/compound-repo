@@ -8,7 +8,7 @@ import { Screen } from '@/components/Screen';
 import { Button, Row, Text } from '@/components/ui';
 import { ApiError, unwrap } from '@/lib/api';
 import { deviceInput } from '@/lib/device';
-import { getFlow } from '@/lib/flow';
+import { getFlow, patchFlow } from '@/lib/flow';
 import { errorText } from '@/lib/i18n';
 import { qk, useLegal } from '@/lib/queries';
 import { useSession } from '@/lib/session';
@@ -57,8 +57,9 @@ export default function Consent() {
         await qc.invalidateQueries({ queryKey: ['legal'] });
         setError(t('consent.outdated'));
       } else if (code.startsWith('otp_')) {
+        // The code is wrong or spent: M-05 shows why (and, after 5 tries, asks for a fresh challenge).
+        patchFlow({ code: undefined, lastError: code });
         router.back();
-        setError(errorText(code));
       } else {
         setError(errorText(code));
       }

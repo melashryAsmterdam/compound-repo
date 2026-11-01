@@ -56,4 +56,4 @@ pnpm doctor        # expo-doctor
 E2E_API_URL=http://127.0.0.1:4100 E2E_API_LOG=/path/to/api.log pnpm test:api
 ```
 
-The E2E suite reads the invite link from the API's console SMS log and needs `DEV_FIXED_OTP=123456` on the API.
+The E2E suite reads the invite link from the API log and needs `DEV_FIXED_OTP=123456` on the API. The console adapters no longer log message text by default (QA-02): start the API with `NODE_ENV=development LOG_MESSAGE_TEXT=1` so the invite link appears in the log.

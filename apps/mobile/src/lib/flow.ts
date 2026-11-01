@@ -8,6 +8,8 @@ export interface AuthFlow {
   preview?: InvitationPreview;
   code?: string;
   contactPhone?: string;
+  /** OTP error from a later step (M-06 activation/complete), shown when M-05 is back in focus. */
+  lastError?: string;
 }
 
 let flow: AuthFlow | null = null;

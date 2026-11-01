@@ -5,6 +5,7 @@
  * Start the API with: DEV_FIXED_OTP=123456 OTP_IP_HOURLY_LIMIT=100000 LOGIN_IP_LIMIT=100000 \
  *   PORT=4100 node dist/main.js > api.log   (then seed the demo compound)
  * Run with: E2E_API_URL=http://127.0.0.1:4100 E2E_API_LOG=/path/api.log pnpm test:api
+ * (API started with NODE_ENV=development LOG_MESSAGE_TEXT=1 DEV_FIXED_OTP=123456 so the invite link is logged — QA-02)
  * Skips when E2E_API_URL is unset.
  */
 import assert from 'node:assert/strict';

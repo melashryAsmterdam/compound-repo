@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AccessibilityInfo, Linking, Platform, Pressable, TextInput, View, type TextInputInstance } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -25,6 +25,20 @@ export default function Otp() {
   const [error, setError] = useState<string | null>(null);
   const [challenge, setChallenge] = useState(flow?.challenge);
   const [now, setNow] = useState(Date.now());
+  const [locked, setLocked] = useState(false);
+
+  // Back from M-06 with an OTP error from activation/complete: show it here.
+  useFocusEffect(
+    useCallback(() => {
+      const e = getFlow()?.lastError;
+      if (!e) return;
+      patchFlow({ lastError: undefined });
+      setCode('');
+      const msg = e === 'otp_invalid' ? t('otp.signInFailed') : e === 'otp_attempts_exceeded' ? t('otp.attemptsExceeded') : errorText(e);
+      setError(msg);
+      if (e === 'otp_attempts_exceeded') setLocked(true);
+    }, [t]),
+  );
   const input = useRef<TextInputInstance>(null);
 
   useEffect(() => {
@@ -45,7 +59,7 @@ export default function Otp() {
   const expired = expiresIn <= 0;
 
   async function submit(value: string) {
-    if (value.length !== 6 || busy) return;
+    if (value.length !== 6 || busy || locked) return;
     setError(null);
     if (flow!.mode === 'activation') {
       // The code is sent with consent in one server transaction (activation/complete).
@@ -65,14 +79,19 @@ export default function Otp() {
       const c = e instanceof ApiError ? e.code : 'internal_error';
       if (c === 'no_active_units') return void handleRevoke(c);
       setCode('');
-      const msg =
-        c === 'otp_invalid' ? t('otp.signInFailed') : c === 'otp_attempts_exceeded' ? t('otp.attemptsExceeded') : errorText(c);
-      setError(msg);
-      AccessibilityInfo.announceForAccessibility(msg);
-      input.current?.focus();
+      showError(c);
     } finally {
       setBusy(false);
     }
+  }
+
+  /** QA-13: 5 wrong codes per challenge, across resends; after that only a new challenge works. */
+  function showError(c: string) {
+    const msg = c === 'otp_invalid' ? t('otp.signInFailed') : c === 'otp_attempts_exceeded' ? t('otp.attemptsExceeded') : errorText(c);
+    setError(msg);
+    if (c === 'otp_attempts_exceeded') setLocked(true);
+    AccessibilityInfo.announceForAccessibility(msg);
+    if (c !== 'otp_attempts_exceeded') input.current?.focus();
   }
 
   async function resend() {
@@ -114,7 +133,7 @@ export default function Otp() {
           if (d.length === 6) void submit(d);
         }}
         autoFocus
-        editable={!busy && !expired}
+        editable={!busy && !expired && !locked}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
@@ -126,7 +145,9 @@ export default function Otp() {
         {expired ? t('otp.expired') : t('otp.validFor', { time: formatCountdown(expiresIn) })}
       </Text>
       {busy ? <Text color={colors.muted}>…</Text> : null}
-      {challenge.resendsRemaining > 0 ? (
+      {locked ? (
+        <Button testID="otp-start-again" title={t('otp.startAgain')} onPress={() => router.back()} />
+      ) : challenge.resendsRemaining > 0 ? (
         <Button kind="ghost" testID="otp-resend" title={resendIn > 0 ? t('otp.resendIn', { time: formatCountdown(resendIn) }) : t('otp.resend')}
           disabled={resendIn > 0} onPress={resend} needsNetwork />
       ) : phone && flow.contactPhone ? (

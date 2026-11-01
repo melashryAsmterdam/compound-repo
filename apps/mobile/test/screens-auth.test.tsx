@@ -62,6 +62,25 @@ describe('M-05 OTP', () => {
     expect(await screen.findByText(/couldn't sign you in with this number/)).toBeTruthy();
   });
 
+  it('after 5 wrong codes the challenge is spent: no resend, start again (QA-13)', async () => {
+    setFlow({ mode: 'signIn', challenge: CHALLENGE as never });
+    const api = mockFetch({ 'POST /app/v1/auth/otp/verify': () => json(400, { code: 'otp_attempts_exceeded', status: 400, title: 'x', type: 'about:blank' }) });
+    await renderScreen(<Otp />, { fetch: api.fetch });
+    await fireEvent.changeText(screen.getByTestId('otp-input'), '000000');
+    expect(await screen.findByText('Too many wrong codes. Start again to get a new code.')).toBeTruthy();
+    expect(screen.queryByTestId('otp-resend')).toBeNull();
+    expect(screen.getByTestId('otp-input').props.editable).toBe(false);
+    await fireEvent.press(screen.getByTestId('otp-start-again'));
+    expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it('shows an OTP error passed back from consent (activation)', async () => {
+    setFlow({ mode: 'activation', challenge: CHALLENGE as never, lastError: 'otp_attempts_exceeded' });
+    await renderScreen(<Otp />, { fetch: mockFetch({}).fetch });
+    expect(await screen.findByTestId('otp-start-again')).toBeTruthy();
+    expect(getFlow()?.lastError).toBeUndefined();
+  });
+
   it('activation mode keeps the code and moves to consent without calling the server', async () => {
     setFlow({ mode: 'activation', challenge: CHALLENGE as never });
     const api = mockFetch({});
