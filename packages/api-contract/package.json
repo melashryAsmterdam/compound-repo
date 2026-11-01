@@ -1,0 +1,14 @@
+{
+  "name": "@compound/api-contract",
+  "version": "1.0.0-mvp",
+  "private": true,
+  "files": ["openapi.yaml"],
+  "scripts": {
+    "lint": "redocly lint openapi.yaml",
+    "mock": "prism mock openapi.yaml --port 4010"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.0.0",
+    "@stoplight/prism-cli": "^5.14.0"
+  }
+}
