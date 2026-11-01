@@ -1,0 +1,162 @@
+{
+  "$name": "Saha (ساحة) design tokens",
+  "$version": "0.1.1-proposal",
+  "$status": "Proposal awaiting owner approval. Target: packages/ui-tokens (consumed by apps/mobile and apps/portal).",
+  "color": {
+    "green": {
+      "50": "#EAF6EF",
+      "100": "#D2ECDD",
+      "200": "#A6D8BB",
+      "300": "#6FBE91",
+      "400": "#3A9F67",
+      "500": "#158249",
+      "600": "#006C35",
+      "700": "#005A2C",
+      "800": "#004722",
+      "900": "#003318"
+    },
+    "accent": {
+      "sand": "#F8F1E1",
+      "gold": "#8C6A1F",
+      "goldMark": "#C9A85A"
+    },
+    "neutral": {
+      "white": "#FFFFFF",
+      "background": "#F5F8F6",
+      "line": "#E1E7E3",
+      "textMuted": "#4F5C55",
+      "textFaint": "#66726A",
+      "text": "#14211A"
+    },
+    "semantic": {
+      "primary": "{color.green.600}",
+      "primaryHover": "{color.green.700}",
+      "primaryInk": "#FFFFFF",
+      "primarySoft": "{color.green.50}",
+      "header": "{color.green.700}",
+      "disabled": "{color.green.200}",
+      "info": "#1F5FA8",
+      "infoBg": "#E7EFF9",
+      "warning": "#8A5A00",
+      "warningBg": "#FDF1D8",
+      "success": "{color.green.600}",
+      "successBg": "{color.green.50}",
+      "neutral": "#4B5563",
+      "neutralBg": "#EEF1EF",
+      "danger": "#B42318",
+      "dangerBg": "#FDE8E6",
+      "visitCard": "{color.accent.sand}"
+    },
+    "status": {
+      "new": {
+        "fg": "{color.semantic.info}",
+        "bg": "{color.semantic.infoBg}"
+      },
+      "in_progress": {
+        "fg": "{color.semantic.warning}",
+        "bg": "{color.semantic.warningBg}"
+      },
+      "done": {
+        "fg": "{color.semantic.success}",
+        "bg": "transparent",
+        "border": "{color.semantic.success}"
+      },
+      "closed": {
+        "fg": "{color.semantic.neutral}",
+        "bg": "{color.semantic.neutralBg}"
+      },
+      "cancelled": {
+        "fg": "{color.neutral.textFaint}",
+        "bg": "{color.semantic.neutralBg}"
+      },
+      "reopened": {
+        "fg": "#FFFFFF",
+        "bg": "{color.semantic.danger}"
+      }
+    }
+  },
+  "contrastOnWhite": {
+    "green.600": 6.57,
+    "green.700": 8.4,
+    "green.800": 10.91,
+    "text": 16.64,
+    "textMuted": 7.1,
+    "textFaint": 5.02,
+    "gold": 5.0
+  },
+  "font": {
+    "family": "IBM Plex Sans Arabic",
+    "weight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "size": {
+      "caption": 12,
+      "body": 14,
+      "bodyLarge": 16,
+      "section": 18,
+      "title": 22,
+      "display": 28
+    },
+    "lineHeight": {
+      "arabic": 1.6,
+      "latin": 1.5
+    },
+    "letterSpacing": {
+      "arabic": 0
+    }
+  },
+  "space": {
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40
+  },
+  "radius": {
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 22,
+    "pill": 999
+  },
+  "elevation": {
+    "card": "0 1px 2px rgba(20,33,26,.06)",
+    "overlay": "0 12px 32px rgba(20,33,26,.18)"
+  },
+  "touchTarget": {
+    "mobileMin": 44,
+    "portalMin": 32
+  },
+  "pattern": {
+    "name": "Eight-point star lattice (Najdi-inspired)",
+    "tile": 56,
+    "opacityOnGreen": 0.13,
+    "opacityOnWhite": 0.08,
+    "use": "Headers, sign-in and splash only; never behind long text."
+  },
+  "rules": [
+    "White is the base; green marks identity and the single primary action per screen.",
+    "No state emblem, national flag, Shahada or other official symbol.",
+    "Compound logos sit beside the product identity and never change colours.",
+    "Red only for errors and Reopened; gold only for decoration.",
+    "All text >= 4.5:1 contrast.",
+    "Use logical properties (start/end) so every component mirrors in Arabic."
+  ],
+  "brand": {
+    "name": {
+      "ar": "ساحة",
+      "en": "Saha"
+    },
+    "mark": "Four rounded squares (units) around a central square with a gold dot (#C9A85A) for management; field green.600, figure white. Inverse: white field, green.600 figure.",
+    "rules": [
+      "Always pair the Latin \"Saha\" with the Arabic \"ساحة\" (or the mark) so it is not read as صحة.",
+      "Product mark on app icon, splash, sign-in, portal sign-in and \"Powered by Saha\"; the compound logo owns the in-app header."
+    ]
+  }
+}
