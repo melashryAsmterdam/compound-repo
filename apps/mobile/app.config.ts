@@ -4,6 +4,8 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 const tokens = require('@compound/ui-tokens/tokens.json') as { color: { green: Record<string, string>; neutral: { white: string } } };
 // semantic.primary = green.600 (tokens v0.1.1).
 const color = { semantic: { primary: tokens.color.green['600']! }, neutral: { white: tokens.color.neutral.white } };
+// The Designer's Saha mark files ship in packages/ui-tokens/assets (placeholders until the mark is final).
+const brandAsset = (file: string) => `../../packages/ui-tokens/assets/${file}`;
 
 /**
  * App config. Product name and store identity are configuration, not code: the name ساحة / Saha is
@@ -49,7 +51,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: ['compoundapp', 'compound'],
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/icon.png',
+  icon: brandAsset('saha-icon-1024.png'),
   userInterfaceStyle: 'light',
   locales: { ar: iosLocale('ar'), en: iosLocale('en') } as unknown as ExpoConfig['locales'],
   ios: {
@@ -85,7 +87,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     // Splash: the Designer's Saha mark (green field) on white, the base colour (tokens rules).
-    ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 160, backgroundColor: color.neutral.white, resizeMode: 'contain' }],
+    ['expo-splash-screen', { image: brandAsset('saha-mark-1024.png'), imageWidth: 160, backgroundColor: color.neutral.white, resizeMode: 'contain' }],
     'expo-secure-store',
     ['expo-localization', { supportsRTL: true }],
     'expo-font',

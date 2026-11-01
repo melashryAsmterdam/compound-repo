@@ -1,6 +1,6 @@
 // Draws the Saha mark into the Android adaptive icon layers and the favicon.
-// icon.png and splash-icon.png are the Designer's own exports (Library compound-app/design/saha-mark/,
-// placeholders until the mark is final) and are not generated here. Geometry: assets/brand/saha-mark.svg
+// The app icon and splash use the Designer's files from packages/ui-tokens/assets directly (see
+// app.config.ts). Geometry: packages/ui-tokens/assets/saha-mark.svg
 // (64-unit grid — four rounded units around a central square, gold dot). Colours: packages/ui-tokens.
 // Run: node scripts/gen-brand-assets.mjs   (from apps/mobile)
 import { readFileSync, writeFileSync } from 'node:fs';
