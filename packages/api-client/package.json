@@ -1,0 +1,16 @@
+{
+  "name": "@compound/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": {
+    "gen": "openapi-typescript ../api-contract/openapi.yaml -o src/schema.d.ts",
+    "build": "pnpm gen && tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "openapi-fetch": "^0.14.0" },
+  "devDependencies": { "openapi-typescript": "^7.9.0", "typescript": "^5.9.0" }
+}

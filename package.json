@@ -1,0 +1,17 @@
+{
+  "name": "compound-app",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint:contract": "pnpm --filter @compound/api-contract lint",
+    "gen:client": "pnpm --filter @compound/api-client gen"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.0"
+  }
+}
