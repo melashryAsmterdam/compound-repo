@@ -229,7 +229,18 @@ export class UnitsController {
         const sets = Object.keys(changes).map((f, i) => `${f} = $${i + 2}`);
         await tx.query(`UPDATE unit SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [unitId, ...Object.values(changes).map((c) => c[1])]);
         const action = changes.status ? (changes.status[1] === 'inactive' ? 'unit.deactivate' : 'unit.activate') : 'unit.update';
-        await audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action, entityType: 'unit', entityId: unitId, changes, ...clientMeta(req) });
+        // Architect decision 2026-11-01 (Q-28): deactivating revokes the owner and their pending invitations
+        // in the same transaction. Requests stay with the admin; the resident loses access.
+        let revokedAssignmentId: string | null = null;
+        if (action === 'unit.deactivate') {
+          const current = await tx.one<any>(`SELECT * FROM unit_assignment WHERE unit_id = $1 AND status <> 'revoked'`, [unitId]);
+          if (current) {
+            await this.revokeAssignment(tx, current, a.id, before, this.ctx.now(), req);
+            revokedAssignmentId = current.id;
+          }
+        }
+        const auditChanges = revokedAssignmentId ? { ...changes, revokedAssignment: [revokedAssignmentId, 'unit_deactivated'] as [unknown, unknown] } : changes;
+        await audit(tx, { compoundId: a.compoundId, actorType: 'admin', actorId: a.id, action, entityType: 'unit', entityId: unitId, changes: auditChanges, ...clientMeta(req) });
       });
     } catch (e) {
       if (isUniqueViolation(e, 'unit_number_uq')) throw new DomainError('unit_number_taken', 409);

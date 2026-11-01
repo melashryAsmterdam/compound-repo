@@ -149,3 +149,19 @@ describe('B5: migrations are a separate job; the API only checks them', () => {
     }
   });
 });
+
+describe('Architect decision (Q-28): deactivating a unit revokes its owner', () => {
+  it('resident loses access, requests stay with the admin, audit records the revoked assignment', async () => {
+    const { unitId, resident } = await activeResident(env, admin);
+    const r = await createRequest(resident, unitId);
+    await admin.patch(`/admin/v1/units/${unitId}`, { status: 'inactive' }).expect(200);
+    const me = await resident.get('/app/v1/me').expect(200);
+    expect(me.body.units.map((u: any) => u.id ?? u.unitId)).not.toContain(unitId);
+    await resident.get(`/app/v1/requests/${r.id}`).expect((res) => expect([403, 404]).toContain(res.status));
+    await admin.get(`/admin/v1/requests/${r.id}`).expect(200);
+    const detail = await admin.get(`/admin/v1/units/${unitId}`).expect(200);
+    expect(detail.body.owner).toBeNull();
+    const row = await env.ctx.db.system((tx) => tx.one<any>(`SELECT changes FROM audit_log WHERE action = 'unit.deactivate' AND entity_id = $1`, [unitId]));
+    expect(JSON.stringify(row?.changes)).toContain('unit_deactivated');
+  });
+});

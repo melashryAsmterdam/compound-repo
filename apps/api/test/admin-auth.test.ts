@@ -48,6 +48,24 @@ describe('A0 admin sign-in', () => {
     await env.http.post('/admin/v1/auth/mfa/verify').send({ challengeId: login.body.challengeId, code: good }).expect(400);
   });
 
+  it('a resend does not reset the wrong-code counter (QA-13)', async () => {
+    await seed(env.ctx, { email: 'mfa2@test.sa', password: 'Correct-Horse-Battery-1' });
+    const login = await env.http.post('/admin/v1/auth/login').send({ email: 'mfa2@test.sa', password: 'Correct-Horse-Battery-1' }).expect(200);
+    const id = login.body.challengeId;
+    const wrong = (c: string) => (c === '000000' ? '111111' : '000000');
+    for (let i = 0; i < 3; i++) await env.http.post('/admin/v1/auth/mfa/verify').send({ challengeId: id, code: wrong(otpFrom(env, 'mfa2@test.sa')) }).expect(400);
+    env.ctx.clock.advance(61_000);
+    await env.http.post('/admin/v1/auth/mfa/resend').send({ challengeId: id }).expect(200);
+    const code = otpFrom(env, 'mfa2@test.sa');
+    await env.http.post('/admin/v1/auth/mfa/verify').send({ challengeId: id, code: wrong(code) }).expect(400);
+    const fifth = await env.http.post('/admin/v1/auth/mfa/verify').send({ challengeId: id, code: wrong(code) }).expect(400);
+    expect(fifth.body.code).toBe('otp_attempts_exceeded');
+    env.ctx.clock.advance(61_000);
+    const again = await env.http.post('/admin/v1/auth/mfa/resend').send({ challengeId: id }).expect(400);
+    expect(again.body.code).toBe('otp_attempts_exceeded');
+    env.ctx.clock.advance(-122_000);
+  });
+
   it('requires CSRF token and a trusted Origin on mutations', async () => {
     const s = await adminSession(env);
     const noCsrf = await env.http.post('/admin/v1/units').set('Cookie', s.cookie).send({ number: 'X1', type: 'villa' }).expect(403);
