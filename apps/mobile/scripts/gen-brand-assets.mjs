@@ -1,6 +1,7 @@
-// Draws the Saha mark into the app icon, Android adaptive icon layers and splash image.
-// Geometry: the approved mark (Library compound-app/product/saha-mockups-v3.html, 64-unit grid —
-// four rounded units around a central square, gold dot for management). Colours: packages/ui-tokens.
+// Draws the Saha mark into the Android adaptive icon layers and the favicon.
+// icon.png and splash-icon.png are the Designer's own exports (Library compound-app/design/saha-mark/,
+// placeholders until the mark is final) and are not generated here. Geometry: assets/brand/saha-mark.svg
+// (64-unit grid — four rounded units around a central square, gold dot). Colours: packages/ui-tokens.
 // Run: node scripts/gen-brand-assets.mjs   (from apps/mobile)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
@@ -8,7 +9,6 @@ import { deflateSync } from 'node:zlib';
 const t = JSON.parse(readFileSync(new URL('../../../packages/ui-tokens/saha-ui-tokens-v0.1.1.json', import.meta.url), 'utf8'));
 const hex = (h) => [1, 3, 5].map((i) => Number.parseInt(h.slice(i, i + 2), 16));
 const GREEN = hex(t.color.green['600']);
-const GREEN_DARK = hex(t.color.green['700']);
 const WHITE = hex(t.color.neutral.white);
 const GOLD = hex(t.color.accent.goldMark);
 
@@ -70,13 +70,8 @@ function png(size, rgba) {
 }
 
 const out = (name, buf) => { writeFileSync(new URL(`../assets/${name}`, import.meta.url), buf); console.log('wrote', name); };
-// iOS masks the corners itself, so the icon is full bleed.
-out('icon.png', render({ size: 1024, field: GREEN, figure: WHITE }));
 // Adaptive icon: green background layer + figure inside the 66% safe zone.
 out('android-icon-background.png', render({ size: 512, field: GREEN, figure: GREEN, dot: null, scale: 1 }));
 out('android-icon-foreground.png', render({ size: 512, field: null, figure: WHITE, scale: 0.6 }));
 out('android-icon-monochrome.png', render({ size: 432, field: null, figure: WHITE, dot: WHITE, scale: 0.6 }));
-// Splash: inverse mark (white field, green figure) on the green.700 splash background.
-out('splash-icon.png', render({ size: 1024, field: WHITE, fieldRadius: 14, figure: GREEN_DARK }));
 out('favicon.png', render({ size: 48, field: GREEN, fieldRadius: 14, figure: WHITE }));
-export { GREEN_DARK };

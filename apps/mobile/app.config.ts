@@ -1,9 +1,9 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 // The config loader can't run the TS tokens module, so read the tokens JSON from the same package.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const tokens = require('@compound/ui-tokens/tokens.json') as { color: { green: Record<string, string> } };
-// semantic.primary = green.600, semantic.header = green.700 (tokens v0.1.1).
-const color = { semantic: { primary: tokens.color.green['600']!, header: tokens.color.green['700']! } };
+const tokens = require('@compound/ui-tokens/tokens.json') as { color: { green: Record<string, string>; neutral: { white: string } } };
+// semantic.primary = green.600 (tokens v0.1.1).
+const color = { semantic: { primary: tokens.color.green['600']! }, neutral: { white: tokens.color.neutral.white } };
 
 /**
  * App config. Product name and store identity are configuration, not code: the name ساحة / Saha is
@@ -84,8 +84,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
-    // Splash: inverse Saha mark on the green header colour (assets from scripts/gen-brand-assets.mjs).
-    ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 160, backgroundColor: color.semantic.header, resizeMode: 'contain' }],
+    // Splash: the Designer's Saha mark (green field) on white, the base colour (tokens rules).
+    ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 160, backgroundColor: color.neutral.white, resizeMode: 'contain' }],
     'expo-secure-store',
     ['expo-localization', { supportsRTL: true }],
     'expo-font',
