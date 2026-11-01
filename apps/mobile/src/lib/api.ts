@@ -43,6 +43,10 @@ export interface ApiOptions {
   baseUrl: string;
   tokens: TokenStore;
   getLocale: () => Locale;
+  /** Sent as X-App-Version on every call (contract v1.1). */
+  appVersion: string;
+  /** Called when any call answers 426 app_update_required (contract v1.1). */
+  onUpdateRequired?: () => void;
   /** Called once when refresh fails (session_revoked / refresh_expired) so the app can sign out. */
   onAuthLost?: (code: string) => void;
   fetch?: typeof fetch;
@@ -52,7 +56,7 @@ const REFRESH_PATH = '/app/v1/auth/refresh';
 
 /**
  * Typed client for /app/v1 generated from the contract. Wraps fetch to add the bearer token
- * (memory only, ADR-012) and Accept-Language, and to rotate the refresh token once on 401.
+ * (memory only, ADR-012), Accept-Language and X-App-Version, to report 426 app_update_required, and to rotate the refresh token once on 401.
  */
 export function createResidentApi(opts: ApiOptions) {
   const baseFetch = opts.fetch ?? globalThis.fetch.bind(globalThis);
@@ -65,11 +69,12 @@ export function createResidentApi(opts: ApiOptions) {
     if (!rt) return false;
     const res = await baseFetch(`${opts.baseUrl}${REFRESH_PATH}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept-Language': opts.getLocale() },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': opts.getLocale(), 'X-App-Version': opts.appVersion },
       body: JSON.stringify({ refreshToken: rt }),
     });
     if (!res.ok) {
       const p = await readProblem(res);
+      if (res.status === 426) opts.onUpdateRequired?.();
       lastRefreshCode = p.code;
       if (res.status === 401) {
         accessToken = null;
@@ -93,6 +98,7 @@ export function createResidentApi(opts: ApiOptions) {
     const retry = input.clone();
     const send = (req: Request) => {
       req.headers.set('Accept-Language', opts.getLocale());
+      req.headers.set('X-App-Version', opts.appVersion);
       if (accessToken && !req.headers.has('Authorization')) req.headers.set('Authorization', `Bearer ${accessToken}`);
       return baseFetch(req);
     };
@@ -102,6 +108,7 @@ export function createResidentApi(opts: ApiOptions) {
     } catch {
       throw new ApiError(0, 'network_error');
     }
+    if (res.status === 426) opts.onUpdateRequired?.();
     if (res.status !== 401 || input.url.endsWith(REFRESH_PATH) || !(await opts.tokens.getRefreshToken())) return res;
     refreshing ??= refresh().finally(() => {
       refreshing = null;
@@ -122,6 +129,12 @@ export function createResidentApi(opts: ApiOptions) {
       await opts.tokens.setRefreshToken(null);
     },
     getAccessToken: () => accessToken,
+    /** Headers for calls made outside openapi-fetch (the SSE stream). Bearer only ever in a header (B6). */
+    authHeaders: (): Record<string, string> => ({
+      'Accept-Language': opts.getLocale(),
+      'X-App-Version': opts.appVersion,
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    }),
     lastRefreshCode: () => lastRefreshCode,
     hasRefreshToken: async () => Boolean(await opts.tokens.getRefreshToken()),
   };

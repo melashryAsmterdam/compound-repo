@@ -1,6 +1,6 @@
 /**
- * Deep links → app routes. Accepts both `compound://` (what the API puts in Notification.deepLink and
- * push data today) and `compoundapp://` (screen spec §2.1), plus https activation links `/a/<token>`.
+ * Deep links → app routes. `compoundapp://` is the scheme (contract v1.1); legacy `compound://` is still
+ * accepted until app 1.1. Also https activation links `/a/<token>`.
  */
 export type LinkTarget =
   | { kind: 'request'; id: string }
@@ -36,10 +36,13 @@ export function hrefFor(t: LinkTarget): string | null {
   }
 }
 
-/** Android Install Referrer (ADR-009): the Play link carries `referrer=token%3D<token>`. */
+/**
+ * Android Install Referrer (ADR-009): the Play link carries `referrer=activation_token%3D<token>`
+ * (key fixed in the build review 2026-11-01). Older `token=` links are still read.
+ */
 export function tokenFromReferrer(referrer: string | null | undefined): string | null {
   if (!referrer) return null;
   const params = new URLSearchParams(referrer);
-  const t = params.get('token') ?? params.get('invite');
+  const t = params.get('activation_token') ?? params.get('token');
   return t && /^[A-Za-z0-9_-]{43}$/.test(t) ? t : null;
 }

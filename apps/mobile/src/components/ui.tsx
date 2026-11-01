@@ -105,7 +105,7 @@ export function IconButton({ icon, label, onPress, color = colors.ink, badge }: 
       <Ionicons name={icon} size={24} color={color} />
       {badge ? (
         <View style={{ position: 'absolute', top: 4, end: 2, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-          <Text variant="small" color="#fff" style={{ fontSize: 11, lineHeight: 14 }}>{badge > 99 ? '99+' : String(badge)}</Text>
+          <Text variant="micro" color={colors.onDark}>{badge > 99 ? '99+' : String(badge)}</Text>
         </View>
       ) : null}
     </Pressable>
@@ -217,7 +217,7 @@ export function OfflineBanner() {
   if (online) return null;
   return (
     <View accessibilityRole="alert" style={{ backgroundColor: colors.ink, paddingVertical: space.sm, paddingHorizontal: space.lg }}>
-      <Text variant="small" color="#fff" style={{ textAlign: 'center' }}>{t('common.offline')}</Text>
+      <Text variant="small" color={colors.onDark} style={{ textAlign: 'center' }}>{t('common.offline')}</Text>
     </View>
   );
 }

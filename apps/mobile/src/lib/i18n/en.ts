@@ -28,7 +28,6 @@ export const en = {
     optional: 'Optional',
     charCount: '{{count}} / {{max}}',
   },
-  boot: { appName: 'Compound' },
   language: {
     title: 'Choose your language',
     subtitle: 'You can change it later in Settings.',
@@ -292,7 +291,7 @@ export const en = {
     privacyNotice: 'Privacy notice',
     signOut: 'Sign out',
     signOutConfirm: 'Sign out of this device?',
-    version: 'Version {{version}}',
+    version: '{{brand}} · Version {{version}}',
     saveFailed: "Couldn't save. Please try again.",
   },
   units: { title: 'Your units', current: 'Current unit', awaiting: '{{count}} awaiting confirmation' },
@@ -306,6 +305,7 @@ export const en = {
     details: 'Details (optional)',
     send: 'Send request',
     received: "Request received. We'll reply by {{date}}.",
+    consentLine: 'You agreed to privacy notice version {{version}} on {{date}}.',
   },
   contact: {
     title: 'Contact management',

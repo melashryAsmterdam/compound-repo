@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import Notifications from '@/app/notifications';
 import Settings from '@/app/(tabs)/settings';
 import Consent from '@/app/consent';
+import Privacy from '@/app/privacy';
 import { setFlow } from '@/lib/flow';
 import { json, ME, mockFetch, renderScreen } from './render';
 import { mockRouter } from './setup';
@@ -82,5 +83,17 @@ describe('M-06 Consent', () => {
     await fireEvent.press(screen.getByTestId('consent-agree'));
     expect(await screen.findByText('The privacy notice was updated. Please review it again.')).toBeTruthy();
     expect(screen.getByTestId('consent-check').props.accessibilityState.checked).toBe(false);
+  });
+});
+
+describe('M-25 Privacy', () => {
+  it('shows the accepted privacy notice from ResidentMe.consent (v1.1)', async () => {
+    const api = mockFetch({});
+    await renderScreen(<Privacy />, { fetch: api.fetch, signedIn: true, me: { ...ME, consent: { acceptedAt: '2026-10-30T09:00:00Z', policyVersion: 'pn-3' } } });
+    expect((await screen.findByTestId('consent-line')).props.children).toMatch(/version pn-3/);
+  });
+  it('hides the line when the profile has no consent yet', async () => {
+    await renderScreen(<Privacy />, { fetch: mockFetch({}).fetch, signedIn: true, me: { ...ME, consent: null } });
+    expect(screen.queryByTestId('consent-line')).toBeNull();
   });
 });

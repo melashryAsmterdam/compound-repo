@@ -41,7 +41,7 @@ export default function Review() {
         }>
         <Ionicons name="checkmark-circle" size={96} color={colors.success} />
         <Text variant="title" testID="request-sent">{t('newRequest.successTitle')}</Text>
-        <Ltr variant="title" color={colors.accent} style={{ fontSize: 30, lineHeight: 42 }}>{created.ref}</Ltr>
+        <Ltr variant="display" color={colors.accent}>{created.ref}</Ltr>
         <Text color={colors.muted} style={{ textAlign: 'center' }}>{t('newRequest.successBody')}</Text>
       </Screen>
     );

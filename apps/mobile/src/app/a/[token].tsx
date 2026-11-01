@@ -72,7 +72,7 @@ export default function ActivationPreview() {
     setError(null);
     try {
       const challenge = await unwrap(api.client.POST('/app/v1/activation/start', { body: { invitationToken: token! } }));
-      setFlow({ mode: 'activation', challenge, preview: inv });
+      setFlow({ mode: 'activation', challenge, preview: inv, ...(inv.compoundPhone ? { contactPhone: inv.compoundPhone } : {}) });
       router.push('/otp');
     } catch (e) {
       setError(errorText(e instanceof ApiError ? e.code : undefined));

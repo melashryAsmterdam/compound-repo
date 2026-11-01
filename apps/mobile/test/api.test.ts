@@ -22,13 +22,30 @@ describe('resident API client', () => {
       calls.push(r);
       return json(409, { type: 'about:blank', title: 'x', status: 409, code: 'version_conflict' });
     });
-    const api = createResidentApi({ baseUrl: 'http://api', tokens: memoryTokens(), getLocale: () => 'en', fetch: fetch as never });
+    const api = createResidentApi({ baseUrl: 'http://api', appVersion: '1.0.0', tokens: memoryTokens(), getLocale: () => 'en', fetch: fetch as never });
     await api.adopt(pair(1));
     const err = await unwrap(api.client.POST('/app/v1/requests/{requestId}/confirm', { params: { path: { requestId: 'r' } }, body: { expectedVersion: 1 } })).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err.code).toBe('version_conflict');
     expect(calls[0]!.headers.get('Authorization')).toBe('Bearer at1');
     expect(calls[0]!.headers.get('Accept-Language')).toBe('en');
+    expect(calls[0]!.headers.get('X-App-Version')).toBe('1.0.0');
+  });
+
+  it('reports 426 app_update_required (contract v1.1)', async () => {
+    const onUpdateRequired = jest.fn();
+    const fetch = jest.fn(async () => json(426, { type: 'about:blank', title: 'x', status: 426, code: 'app_update_required' }));
+    const api = createResidentApi({ baseUrl: 'http://api', appVersion: '0.9.0', tokens: memoryTokens(), getLocale: () => 'ar', onUpdateRequired, fetch: fetch as never });
+    const err = await unwrap(api.client.GET('/app/v1/me')).catch((e) => e);
+    expect(err.code).toBe('app_update_required');
+    expect(onUpdateRequired).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds SSE headers with the bearer in Authorization, never the URL (B6)', async () => {
+    const api = createResidentApi({ baseUrl: 'http://api', appVersion: '1.0.0', tokens: memoryTokens(), getLocale: () => 'ar', fetch: jest.fn() as never });
+    expect(api.authHeaders().Authorization).toBeUndefined();
+    await api.adopt(pair(1));
+    expect(api.authHeaders()).toEqual({ Authorization: 'Bearer at1', 'Accept-Language': 'ar', 'X-App-Version': '1.0.0' });
   });
 
   it('rotates the refresh token once on 401 and retries with the new access token', async () => {
@@ -44,7 +61,7 @@ describe('resident API client', () => {
       seen.push(auth);
       return auth === 'Bearer at2' ? json(200, me) : json(401, { code: 'unauthenticated' });
     });
-    const api = createResidentApi({ baseUrl: 'http://api', tokens, getLocale: () => 'ar', fetch: fetch as never });
+    const api = createResidentApi({ baseUrl: 'http://api', appVersion: '1.0.0', tokens, getLocale: () => 'ar', fetch: fetch as never });
     const got = await unwrap(api.client.GET('/app/v1/me'));
     expect(got.fullName).toBe('Noura');
     expect(seen).toEqual(['', 'Bearer at2']);
@@ -59,7 +76,7 @@ describe('resident API client', () => {
       if (url.endsWith('/auth/refresh')) return json(401, { code: 'session_revoked' });
       return json(401, { code: 'unauthenticated' });
     });
-    const api = createResidentApi({ baseUrl: 'http://api', tokens, getLocale: () => 'ar', onAuthLost: lost, fetch: fetch as never });
+    const api = createResidentApi({ baseUrl: 'http://api', appVersion: '1.0.0', tokens, getLocale: () => 'ar', onAuthLost: lost, fetch: fetch as never });
     expect(await api.refresh()).toBe(false);
     expect(lost).toHaveBeenCalledWith('session_revoked');
     expect(api.lastRefreshCode()).toBe('session_revoked');
@@ -67,7 +84,7 @@ describe('resident API client', () => {
   });
 
   it('turns a network failure into ApiError(0, network_error)', async () => {
-    const api = createResidentApi({ baseUrl: 'http://api', tokens: memoryTokens(), getLocale: () => 'ar', fetch: (async () => { throw new TypeError('Network request failed'); }) as never });
+    const api = createResidentApi({ baseUrl: 'http://api', appVersion: '1.0.0', tokens: memoryTokens(), getLocale: () => 'ar', fetch: (async () => { throw new TypeError('Network request failed'); }) as never });
     const err = await unwrap(api.client.GET('/app/v1/categories')).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err.isNetwork).toBe(true);
@@ -85,7 +102,7 @@ describe('resident API client', () => {
       }
       return (input as Request).headers.get('Authorization') === 'Bearer at2' ? json(200, []) : json(401, { code: 'unauthenticated' });
     });
-    const api = createResidentApi({ baseUrl: 'http://api', tokens, getLocale: () => 'ar', fetch: fetch as never });
+    const api = createResidentApi({ baseUrl: 'http://api', appVersion: '1.0.0', tokens, getLocale: () => 'ar', fetch: fetch as never });
     await Promise.all([unwrap(api.client.GET('/app/v1/categories')), unwrap(api.client.GET('/app/v1/categories'))]);
     expect(refreshes).toBe(1);
   });

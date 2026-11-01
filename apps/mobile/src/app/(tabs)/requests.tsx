@@ -9,7 +9,7 @@ import { Button, EmptyState, ErrorPanel, OfflineBanner, Segmented, Skeleton } fr
 import { useRequests } from '@/lib/queries';
 import { useLiveUpdates } from '@/lib/realtime';
 import { sortRequests } from '@/lib/requests';
-import { colors, radius, space } from '@/lib/theme';
+import { colors, radius, shadow, space } from '@/lib/theme';
 
 /** M-11 My Requests: Open (default) / Closed, 25 per page, infinite scroll. */
 export default function MyRequests() {
@@ -51,7 +51,7 @@ export default function MyRequests() {
         accessibilityRole="button"
         accessibilityLabel={t('home.newRequest')}
         onPress={() => router.push('/requests/new')}
-        style={{ position: 'absolute', end: space.lg, bottom: space.lg, width: 60, height: 60, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
+        style={{ position: 'absolute', end: space.lg, bottom: space.lg, width: 60, height: 60, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow }}
       >
         <Ionicons name="add" size={30} color={colors.accentInk} />
       </Pressable>

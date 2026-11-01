@@ -12,11 +12,11 @@ type StreamType =
 
 /**
  * SSE while M-10, M-11 or M-15 is focused (screen spec §1.5); push covers the rest. Frames carry
- * ids only, so we refetch. The token goes in the query string because the server accepts it there
- * for /events/stream only.
+ * ids only, so we refetch. The bearer travels in the Authorization header only — the API rejects
+ * an access_token query parameter (contract v1.1, build review B6).
  */
 export function useLiveUpdates() {
-  const { api, status, handleRevoke, refreshMe } = useSession();
+  const { api, status, handleRevoke } = useSession();
   const qc = useQueryClient();
 
   useFocusEffect(
@@ -25,9 +25,9 @@ export function useLiveUpdates() {
       let es: EventSource<StreamType> | null = null;
       let closed = false;
       const open = () => {
-        const token = api.getAccessToken();
-        if (!token || closed) return;
-        es = new EventSource<StreamType>(`${API_URL}/app/v1/events/stream?access_token=${encodeURIComponent(token)}`, {
+        if (!api.getAccessToken() || closed) return;
+        es = new EventSource<StreamType>(`${API_URL}/app/v1/events/stream`, {
+          headers: api.authHeaders(),
           pollingInterval: 5000,
         });
         const onFrame = (ev: { data: string | null; type: string }) => {
@@ -42,9 +42,6 @@ export function useLiveUpdates() {
             case 'request.event_added':
             case 'request.created':
               invalidateRequest(qc, data.entityId);
-              break;
-            case 'unit.revoked':
-              void refreshMe();
               break;
             case 'announcement.updated':
             case 'announcement.published':
@@ -76,6 +73,6 @@ export function useLiveUpdates() {
         es?.removeAllEventListeners();
         es?.close();
       };
-    }, [api, status, qc, handleRevoke, refreshMe]),
+    }, [api, status, qc, handleRevoke]),
   );
 }

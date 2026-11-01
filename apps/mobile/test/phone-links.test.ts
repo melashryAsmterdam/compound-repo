@@ -26,7 +26,7 @@ describe('Saudi mobile input (K-4)', () => {
 });
 
 describe('deep links', () => {
-  it('parses both compound:// (API) and compoundapp:// (spec)', () => {
+  it('parses compoundapp:// (v1.1) and legacy compound://', () => {
     expect(parseLink('compound://requests/abc')).toEqual({ kind: 'request', id: 'abc' });
     expect(parseLink('compoundapp://announcements/x1')).toEqual({ kind: 'announcement', id: 'x1' });
     expect(parseLink('compound://notifications')).toEqual({ kind: 'notifications' });
@@ -42,7 +42,8 @@ describe('deep links', () => {
     expect(hrefFor({ kind: 'unknown' })).toBeNull();
   });
   it('reads the token from the Play install referrer (ADR-009)', () => {
-    expect(tokenFromReferrer(`token=${TOKEN}&utm_source=invite`)).toBe(TOKEN);
+    expect(tokenFromReferrer(`activation_token=${TOKEN}&utm_source=invite`)).toBe(TOKEN);
+    expect(tokenFromReferrer(`token=${TOKEN}`)).toBe(TOKEN);
     expect(tokenFromReferrer('utm_source=google-play')).toBeNull();
     expect(tokenFromReferrer(null)).toBeNull();
   });

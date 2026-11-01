@@ -27,7 +27,10 @@ Talks to the API only through `@compound/api-client` (generated from `packages/a
 - `src/lib/requests.ts` — pure status/outcome/timeline/visit rules (§1.3, M-11, M-15).
 - `src/lib/drafts.ts`, `useDraft.tsx`, `photos.ts`, `upload.ts` — draft per unit, resize + JPEG re-encode (drops EXIF/GPS), signed upload.
 - `src/lib/format.ts` — `formatDual` Gregorian + Hijri (Umm al-Qura), 12-hour, Asia/Riyadh, Western digits.
-- `src/lib/realtime.ts` — SSE while Home / My requests / Request detail are focused; push otherwise.
+- `src/lib/realtime.ts` — SSE while Home / My requests / Request detail are focused; push otherwise. Bearer in the `Authorization` header only (contract v1.1, B6).
+- `src/lib/theme/` — the thin theme layer. `tokens.ts` is the only file with raw values (shaped like `packages/ui-tokens`); `index.ts` maps them to the semantic names screens use. When ui-tokens lands, `tokens.ts` becomes a re-export and nothing else changes.
+- `app.config.ts` — product name (`APP_NAME_AR` / `APP_NAME_EN`, default ساحة / Saha, pending trademark clearance), per-profile bundle ids via `APP_VARIANT` (R3), Arabic iOS display name and permission strings (R4).
+- `src/lib/config.ts` — API URL, app version, brand, store URL; minimum version from `GET /app/v1/meta` with a build-time fallback. Every call sends `X-App-Version`; any `426 app_update_required` opens M-27.
 - `src/lib/i18n/{ar,en}.ts` — every visible string; parity enforced by a test.
 
 ## Run

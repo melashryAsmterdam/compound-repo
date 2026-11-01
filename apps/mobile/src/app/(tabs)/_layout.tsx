@@ -3,7 +3,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { UnitHeader } from '@/components/Header';
 import { useSession } from '@/lib/session';
-import { colors, fonts } from '@/lib/theme';
+import { colors, fonts, type } from '@/lib/theme';
 
 /** Bottom tabs; RN mirrors the order in RTL so Home is right-most in Arabic (§2.1). */
 export default function TabsLayout() {
@@ -15,7 +15,7 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 12 },
+        tabBarLabelStyle: type.caption,
         header: () => <UnitHeader />,
       }}
     >

@@ -7,7 +7,7 @@ import { useToast } from '@/components/Toast';
 import { Chevron, Ltr, Row, Text } from '@/components/ui';
 import { unwrap } from '@/lib/api';
 import { useBiometricKind } from '@/lib/biometric';
-import { APP_VERSION } from '@/lib/config';
+import { APP_VERSION, BRAND } from '@/lib/config';
 import { maskEmail, maskPhone } from '@/lib/phone';
 import { pushPermission } from '@/lib/push';
 import { unitLabel, useSession } from '@/lib/session';
@@ -141,7 +141,7 @@ export default function Settings() {
           }
         />
       </Group>
-      <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>{t('settings.version', { version: APP_VERSION })}</Text>
+      <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>{t('settings.version', { brand: BRAND[locale], version: APP_VERSION })}</Text>
     </Screen>
   );
 }

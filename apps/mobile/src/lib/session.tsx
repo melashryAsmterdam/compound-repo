@@ -1,9 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DevSettings, I18nManager, Platform } from 'react-native';
 import { createResidentApi, REVOKE_CODES, unwrap, type ResidentApi, type ResidentMe, type TokenPair, type UnitRef } from './api';
-import { API_URL } from './config';
+import { API_URL, APP_VERSION } from './config';
 import { currentLocale, i18n, isRtl, type Locale } from './i18n';
 import { clearPersonalData, readPrefs, secureTokenStore, writePrefs } from './storage';
 
@@ -55,6 +56,9 @@ export function SessionProvider({ children, api: injected }: { children: ReactNo
         baseUrl: API_URL,
         tokens: secureTokenStore,
         getLocale: currentLocale,
+        appVersion: APP_VERSION,
+        // Any call answering 426 sends the person to M-27 Update required (contract v1.1).
+        onUpdateRequired: () => router.replace('/update-required'),
         onAuthLost: (code) => onAuthLost.current(code),
       }),
     [injected],

@@ -30,7 +30,6 @@ export const ar: Catalogue = {
     optional: 'اختياري',
     charCount: '{{count}} / {{max}}',
   },
-  boot: { appName: 'المجمع' },
   language: {
     title: 'اختر لغتك',
     subtitle: 'يمكنك تغييرها لاحقًا من الإعدادات.',
@@ -294,7 +293,7 @@ export const ar: Catalogue = {
     privacyNotice: 'إشعار الخصوصية',
     signOut: 'تسجيل الخروج',
     signOutConfirm: 'تسجيل الخروج من هذا الجهاز؟',
-    version: 'الإصدار {{version}}',
+    version: '{{brand}} · الإصدار {{version}}',
     saveFailed: 'تعذّر الحفظ. يرجى المحاولة مرة أخرى.',
   },
   units: { title: 'وحداتك', current: 'الوحدة الحالية', awaiting: '{{count}} بانتظار التأكيد' },
@@ -308,6 +307,7 @@ export const ar: Catalogue = {
     details: 'التفاصيل (اختياري)',
     send: 'أرسل الطلب',
     received: 'تم استلام طلبك. سنرد عليك قبل {{date}}.',
+    consentLine: 'وافقت على إشعار الخصوصية الإصدار {{version}} بتاريخ {{date}}.',
   },
   contact: {
     title: 'التواصل مع الإدارة',

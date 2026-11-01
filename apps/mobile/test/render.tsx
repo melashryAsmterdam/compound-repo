@@ -57,7 +57,7 @@ export async function renderScreen(ui: ReactElement, opts: { fetch: ReturnType<t
   void i18n.changeLanguage(opts.locale ?? 'en');
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
   const tokens = { value: null as string | null, getRefreshToken: async () => tokens.value, setRefreshToken: async (t: string | null) => void (tokens.value = t) };
-  const api = createResidentApi({ baseUrl: 'http://api.test', tokens, getLocale: () => (i18n.language as Locale), fetch: opts.fetch as never });
+  const api = createResidentApi({ baseUrl: 'http://api.test', appVersion: '1.0.0', tokens, getLocale: () => (i18n.language as Locale), fetch: opts.fetch as never });
   const metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
   const tree = (
     <SafeAreaProvider initialMetrics={metrics}>

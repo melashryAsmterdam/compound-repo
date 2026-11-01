@@ -77,7 +77,7 @@ export function VisitCard({ startAt, endAt, past, rescheduled, title }: { startA
   const { locale } = useSession();
   return (
     <View testID="visit-card" accessibilityRole="summary"
-      style={{ backgroundColor: past ? colors.neutralSoft : colors.accentSoft, borderRadius: radius.lg, padding: space.lg, gap: space.xs, borderWidth: 1, borderColor: past ? colors.line : colors.accent }}>
+      style={{ backgroundColor: past ? colors.neutralSoft : colors.visitCard, borderRadius: radius.lg, padding: space.lg, gap: space.xs, borderWidth: 1, borderColor: past ? colors.line : colors.accent }}>
       <Row>
         <Ionicons name="calendar" size={20} color={past ? colors.muted : colors.accent} />
         <Text variant="label" color={past ? colors.muted : colors.accent} style={{ flex: 1 }}>

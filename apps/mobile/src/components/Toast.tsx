@@ -21,8 +21,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={show}>
       {children}
       {msg ? (
-        <View pointerEvents="none" style={{ position: 'absolute', start: space.lg, end: space.lg, bottom: insets.bottom + 72, backgroundColor: colors.ink, borderRadius: radius.md, padding: space.md }}>
-          <Text color="#fff" style={{ textAlign: 'center' }}>{msg}</Text>
+        <View pointerEvents="none" style={{ position: 'absolute', start: space.lg, end: space.lg, bottom: insets.bottom + 72, backgroundColor: colors.toast, borderRadius: radius.md, padding: space.md }}>
+          <Text color={colors.onDark} style={{ textAlign: 'center' }}>{msg}</Text>
         </View>
       ) : null}
     </Ctx.Provider>

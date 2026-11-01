@@ -11,13 +11,11 @@ import { colors } from '@/lib/theme';
 
 type Kind = 'access' | 'correction' | 'deletion';
 
-/**
- * M-25 Privacy and my data (PDPL rights path, K-6). The consent date/version line in the spec needs a
- * field on ResidentMe that the contract doesn't have yet (raised with the Architect).
- */
+/** M-25 Privacy and my data (PDPL rights path, K-6), with the accepted notice from ResidentMe.consent (v1.1). */
 export default function Privacy() {
   const { t } = useTranslation();
-  const { api, locale } = useSession();
+  const { api, locale, me } = useSession();
+  const consent = me?.consent;
   const [kind, setKind] = useState<Kind | null>(null);
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,6 +41,11 @@ export default function Privacy() {
   return (
     <Screen>
       <Text>{t('privacy.intro')}</Text>
+      {consent?.acceptedAt && consent.policyVersion ? (
+        <Text testID="consent-line" variant="small" color={colors.muted}>
+          {t('privacy.consentLine', { version: consent.policyVersion, date: formatDual(consent.acceptedAt, locale) })}
+        </Text>
+      ) : null}
       <Button kind="ghost" title={t('consent.readPrivacy')} onPress={() => router.push('/legal/privacy_notice')} />
       {result ? <Card><Text variant="label" color={colors.success}>{result}</Text></Card> : null}
       {(['access', 'correction', 'deletion'] as const).map((k) => (
