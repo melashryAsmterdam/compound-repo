@@ -1,8 +1,8 @@
 /**
- * Saha (ساحة) design tokens v0.1.1, shared by apps/portal and apps/mobile.
+ * Saha (ساحة) design tokens v0.1.2, shared by apps/portal and apps/mobile.
  *
- * Source of truth: ../saha-ui-tokens-v0.1.1.json (copied byte-for-byte from the Library,
- * compound-app/design). `source` below mirrors it; a test fails if the two drift. Everything else
+ * Source of truth: ../saha-ui-tokens-v0.1.2.json (also in the Library, compound-app/design;
+ * v0.1.2 fixes the cancelled badge contrast). `source` below mirrors it; a test fails if the two drift. Everything else
  * is derived: `{color.x.y}` references are resolved, and `cssVariables()` / tokens.css give the
  * web the same values as CSS custom properties.
  *
@@ -10,7 +10,7 @@
  * source without a build step.
  */
 
-export const TOKENS_VERSION = '0.1.1';
+export const TOKENS_VERSION = '0.1.2';
 
 export const source = {
   color: {
@@ -59,7 +59,7 @@ export const source = {
       in_progress: { fg: '{color.semantic.warning}', bg: '{color.semantic.warningBg}' },
       done: { fg: '{color.semantic.success}', bg: 'transparent', border: '{color.semantic.success}' },
       closed: { fg: '{color.semantic.neutral}', bg: '{color.semantic.neutralBg}' },
-      cancelled: { fg: '{color.neutral.textFaint}', bg: '{color.semantic.neutralBg}' },
+      cancelled: { fg: '{color.neutral.textFaint}', bg: '{color.neutral.white}', border: '{color.neutral.line}' },
       reopened: { fg: '#FFFFFF', bg: '{color.semantic.danger}' },
     },
   },
