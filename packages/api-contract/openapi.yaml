@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Compound App API
-  version: 1.0.0-mvp
+  version: 1.1.0-mvp
   summary: Shared API for the resident mobile app (/app/v1) and the compound-owner admin portal (/admin/v1).
   description: |
     Contract-first (ADR-006). Conventions:
@@ -11,6 +11,13 @@ info:
     - Mutating resident calls that create resources accept `Idempotency-Key` (uuid).
     - Optimistic concurrency on requests: send `expectedVersion`; `409 version_conflict` if stale.
     - Accept-Language: `ar` | `en` selects language for server-rendered text (notification titles, category names).
+    - Resident app sends `X-App-Version: <semver>` on every /app/v1 call; below the minimum in `GET /app/v1/meta` the API answers `426 app_update_required` (v1.1).
+    - Bearer tokens travel only in the `Authorization` header — never in a query string, including the SSE stream (v1.1, build review B6).
+    - Deep links use the `compoundapp://` scheme (v1.1). The app still accepts legacy `compound://` until app 1.1.
+
+    v1.1.0 (2026-11-01, additive only — decisions in the Architect build review 2026-11-01): PATCH /admin/v1/me,
+    POST /admin/v1/me/password, GET /admin/v1/units/summary, X-CSRF-Token header on getAdminMe, GET /app/v1/meta,
+    426 app_update_required, InvitationPreview.compoundPhone, ResidentMe.consent, 422 visit_in_past, deep-link scheme.
 servers:
   - url: https://api.compound.example.sa
     description: Production (GCP me-central2)
@@ -143,8 +150,45 @@ paths:
       tags: [Admin Auth]
       security: [{ adminSession: [] }]
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminMe' } } } }
+        '200':
+          description: OK
+          headers:
+            X-CSRF-Token: { description: 'Synchroniser token for this session; send it on every mutating /admin/v1 call (v1.1).', schema: { type: string } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminMe' } } }
         '401': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: patchAdminMe
+      summary: Change the admin's own portal language (v1.1).
+      tags: [Admin Auth]
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfHeader' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [locale], properties: { locale: { $ref: '#/components/schemas/Locale' } } } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/AdminMe' } } } }
+        '422': { $ref: '#/components/responses/Problem' }
+  /admin/v1/me/password:
+    post:
+      operationId: postAdminMePassword
+      summary: Change own password while signed in; revokes all other sessions of this admin (v1.1).
+      tags: [Admin Auth]
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, maxLength: 128 }
+                newPassword: { type: string, minLength: 12, maxLength: 128 }
+      responses:
+        '204': { description: 'Password changed; other sessions revoked, this one kept' }
+        '400': { description: 'code=current_password_invalid | validation_failed', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+        '429': { $ref: '#/components/responses/Problem' }
 
   # ═══════════════════════ ADMIN — COMPOUND SETTINGS ═══════════════════════
   /admin/v1/compound:
@@ -216,6 +260,28 @@ paths:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/UnitDetail' } } } }
         '409': { description: 'code=unit_number_taken (A1-AC2)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
         '422': { $ref: '#/components/responses/Problem' }
+  /admin/v1/units/summary:
+    get:
+      operationId: getAdminUnitsSummary
+      tags: [Admin Units]
+      summary: Unit counters for the Units page header (v1.1).
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, active, inactive, assigned, unassigned, pendingInvitations]
+                properties:
+                  total: { type: integer }
+                  active: { type: integer }
+                  inactive: { type: integer }
+                  assigned: { type: integer, description: Units with an active owner assignment }
+                  unassigned: { type: integer }
+                  pendingInvitations: { type: integer }
+        '401': { $ref: '#/components/responses/Problem' }
   /admin/v1/units/blocks:
     get:
       operationId: getAdminUnitsBlocks
@@ -237,6 +303,10 @@ paths:
     patch:
       operationId: patchAdminUnitsByUnitId
       summary: Patch Admin Units By Unit Id
+      description: |
+        Setting `status=inactive` (v1.1 clarification) in one transaction revokes the active owner assignment
+        (`revoke_reason=unit_deactivated`), expires pending invitations and writes audit `unit.deactivate`.
+        Requests stay visible and actionable for the admin; the resident loses access to the unit.
       tags: [Admin Units]
       security: [{ adminSession: [] }]
       parameters: [{ $ref: '#/components/parameters/CsrfHeader' }]
@@ -408,7 +478,7 @@ paths:
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/RequestEvent' } } } }
         '409': { description: 'code=request_closed', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
-        '422': { $ref: '#/components/responses/Problem' }
+        '422': { description: 'code=validation_failed | visit_in_past (visit start must be later than now, Asia/Riyadh; endTime after startTime)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
   /admin/v1/requests/{requestId}/comments/{eventId}:
     parameters: [{ $ref: '#/components/parameters/RequestId' }, { name: eventId, in: path, required: true, schema: { type: string, format: uuid } }]
     patch:
@@ -561,6 +631,30 @@ paths:
       responses:
         '200': { description: text/event-stream, content: { text/event-stream: { schema: { $ref: '#/components/schemas/StreamEvent' } } } }
 
+  # ═══════════════════════ APP — META (v1.1) ═══════════════════════
+  /app/v1/meta:
+    get:
+      operationId: getAppMeta
+      tags: [Shared]
+      summary: Public. Minimum supported and latest app versions; the app calls it on start and forces an update below the minimum (v1.1).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [minSupportedVersion, latestVersion]
+                properties:
+                  minSupportedVersion:
+                    type: object
+                    required: [ios, android]
+                    properties: { ios: { type: string, examples: ['1.0.0'] }, android: { type: string, examples: ['1.0.0'] } }
+                  latestVersion:
+                    type: object
+                    required: [ios, android]
+                    properties: { ios: { type: string }, android: { type: string } }
+
   # ═══════════════════════ APP — ACTIVATION (R1) ═══════════════════════
   /app/v1/invitations/{token}:
     get:
@@ -701,8 +795,10 @@ paths:
       summary: Get App Me
       tags: [App Profile]
       security: [{ residentBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/AppVersionHeader' }]
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ResidentMe' } } } }
+        '426': { $ref: '#/components/responses/AppUpdateRequired' }
     patch:
       operationId: patchAppMe
       summary: Patch App Me
@@ -942,6 +1038,7 @@ paths:
       operationId: getAppEventsStream
       tags: [App Notifications]
       summary: SSE stream for the signed-in person (request.updated, request.event_added, announcement.published, notification.created, session.revoked).
+      description: Token in the `Authorization` header only. An `access_token` query parameter is not accepted (401).
       security: [{ residentBearer: [] }]
       responses:
         '200': { description: text/event-stream, content: { text/event-stream: { schema: { $ref: '#/components/schemas/StreamEvent' } } } }
@@ -1013,6 +1110,7 @@ components:
 
   parameters:
     CsrfHeader: { name: X-CSRF-Token, in: header, required: true, schema: { type: string } }
+    AppVersionHeader: { name: X-App-Version, in: header, required: false, description: 'Resident app semver; sent on every /app/v1 call (v1.1).', schema: { type: string, examples: ['1.0.0'] } }
     IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
     UnitId: { name: unitId, in: path, required: true, schema: { type: string, format: uuid } }
     RequestId: { name: requestId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -1022,6 +1120,11 @@ components:
   responses:
     Problem:
       description: Error
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    AppUpdateRequired:
+      description: 'code=app_update_required — X-App-Version is below minSupportedVersion (v1.1). May be returned by any /app/v1 operation except /app/v1/meta.'
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -1037,7 +1140,7 @@ components:
         code:
           type: string
           description: Stable machine code; clients map to localised text.
-          examples: [validation_failed, unauthenticated, forbidden, not_found, rate_limited, account_locked, otp_invalid, otp_expired, otp_attempts_exceeded, invitation_expired, invitation_used, invitation_revoked, unit_number_taken, unit_in_use, no_owner_assigned, already_active, channel_unavailable, invite_limit_reached, invalid_transition, version_conflict, request_closed, edit_window_closed, unit_access_revoked, session_revoked, consent_version_outdated]
+          examples: [validation_failed, unauthenticated, forbidden, not_found, rate_limited, account_locked, otp_invalid, otp_expired, otp_attempts_exceeded, invitation_expired, invitation_used, invitation_revoked, unit_number_taken, unit_in_use, no_owner_assigned, already_active, channel_unavailable, invite_limit_reached, invalid_transition, version_conflict, request_closed, edit_window_closed, unit_access_revoked, session_revoked, consent_version_outdated, visit_in_past, current_password_invalid, app_update_required]
         detail: { type: string }
         traceId: { type: string }
         errors:
@@ -1364,6 +1467,12 @@ components:
         email: { type: [string, 'null'] }
         locale: { $ref: '#/components/schemas/Locale' }
         muteAnnouncements: { type: boolean }
+        consent:
+          type: [object, 'null']
+          description: Latest accepted privacy notice (v1.1); shown on the Privacy screen.
+          properties:
+            acceptedAt: { type: string, format: date-time }
+            policyVersion: { type: string }
         units:
           type: array
           description: Active assignments only; drives the unit switcher (R0-AC3).
@@ -1387,6 +1496,7 @@ components:
         block: { type: [string, 'null'] }
         otpChannel: { type: string, enum: [sms, email] }
         maskedDestination: { type: string }
+        compoundPhone: { type: [string, 'null'], description: 'Compound contact phone, E.164 (v1.1)', examples: ['+966112345678'] }
         privacyNoticeVersion: { type: string }
         termsVersion: { type: string }
 
@@ -1398,7 +1508,7 @@ components:
         type: { type: string, enum: [request_status_changed, request_comment, visit_scheduled, visit_rescheduled, visit_reminder, announcement, request_auto_closed, access_revoked] }
         title: { type: string, description: Rendered in the person's locale }
         body: { type: string }
-        deepLink: { type: string, examples: ['compound://requests/0b6e…', 'compound://announcements/7a1c…'] }
+        deepLink: { type: string, examples: ['compoundapp://requests/0b6e…', 'compoundapp://announcements/7a1c…'] }
         requestId: { type: [string, 'null'], format: uuid }
         announcementId: { type: [string, 'null'], format: uuid }
         createdAt: { type: string, format: date-time }

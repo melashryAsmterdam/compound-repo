@@ -120,6 +120,24 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** Change the admin's own portal language (v1.1). */
+        patch: operations["patchAdminMe"];
+        trace?: never;
+    };
+    "/admin/v1/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change own password while signed in; revokes all other sessions of this admin (v1.1). */
+        post: operations["postAdminMePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -153,6 +171,23 @@ export interface paths {
         put?: never;
         /** Post Admin Units */
         post: operations["postAdminUnits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/units/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unit counters for the Units page header (v1.1). */
+        get: operations["getAdminUnitsSummary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -193,7 +228,12 @@ export interface paths {
         delete: operations["deleteAdminUnitsByUnitId"];
         options?: never;
         head?: never;
-        /** Patch Admin Units By Unit Id */
+        /**
+         * Patch Admin Units By Unit Id
+         * @description Setting `status=inactive` (v1.1 clarification) in one transaction revokes the active owner assignment
+         *     (`revoke_reason=unit_deactivated`), expires pending invitations and writes audit `unit.deactivate`.
+         *     Requests stay visible and actionable for the admin; the resident loses access to the unit.
+         */
         patch: operations["patchAdminUnitsByUnitId"];
         trace?: never;
     };
@@ -483,6 +523,23 @@ export interface paths {
         };
         /** SSE stream of compound events (ADR-007). Event types request.created, request.updated, request.event_added, invitation.updated, announcement.updated. */
         get: operations["getAdminEventsStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/v1/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public. Minimum supported and latest app versions; the app calls it on start and forces an update below the minimum (v1.1). */
+        get: operations["getAppMeta"];
         put?: never;
         post?: never;
         delete?: never;
@@ -922,7 +979,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** SSE stream for the signed-in person (request.updated, request.event_added, announcement.published, notification.created, session.revoked). */
+        /**
+         * SSE stream for the signed-in person (request.updated, request.event_added, announcement.published, notification.created, session.revoked).
+         * @description Token in the `Authorization` header only. An `access_token` query parameter is not accepted (401).
+         */
         get: operations["getAppEventsStream"];
         put?: never;
         post?: never;
@@ -1036,6 +1096,9 @@ export interface components {
              * @example unit_access_revoked
              * @example session_revoked
              * @example consent_version_outdated
+             * @example visit_in_past
+             * @example current_password_invalid
+             * @example app_update_required
              */
             code: string;
             detail?: string;
@@ -1387,6 +1450,12 @@ export interface components {
             email?: string | null;
             locale: components["schemas"]["Locale"];
             muteAnnouncements: boolean;
+            /** @description Latest accepted privacy notice (v1.1); shown on the Privacy screen. */
+            consent?: {
+                /** Format: date-time */
+                acceptedAt?: string;
+                policyVersion?: string;
+            } | null;
             /** @description Active assignments only; drives the unit switcher (R0-AC3). */
             units: {
                 /** Format: uuid */
@@ -1407,6 +1476,11 @@ export interface components {
             /** @enum {string} */
             otpChannel: "sms" | "email";
             maskedDestination: string;
+            /**
+             * @description Compound contact phone, E.164 (v1.1)
+             * @example +966112345678
+             */
+            compoundPhone?: string | null;
             privacyNoticeVersion?: string;
             termsVersion?: string;
         };
@@ -1419,8 +1493,8 @@ export interface components {
             title: string;
             body?: string;
             /**
-             * @example compound://requests/0b6e…
-             * @example compound://announcements/7a1c…
+             * @example compoundapp://requests/0b6e…
+             * @example compoundapp://announcements/7a1c…
              */
             deepLink?: string;
             /** Format: uuid */
@@ -1491,9 +1565,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description code=app_update_required — X-App-Version is below minSupportedVersion (v1.1). May be returned by any /app/v1 operation except /app/v1/meta. */
+        AppUpdateRequired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         CsrfHeader: string;
+        /** @description Resident app semver; sent on every /app/v1 call (v1.1). */
+        AppVersionHeader: string;
         IdempotencyKey: string;
         UnitId: string;
         RequestId: string;
@@ -1689,6 +1774,8 @@ export interface operations {
             /** @description OK */
             200: {
                 headers: {
+                    /** @description Synchroniser token for this session; send it on every mutating /admin/v1 call (v1.1). */
+                    "X-CSRF-Token"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1696,6 +1783,72 @@ export interface operations {
                 };
             };
             401: components["responses"]["Problem"];
+        };
+    };
+    patchAdminMe: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    locale: components["schemas"]["Locale"];
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMe"];
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    postAdminMePassword: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    currentPassword: string;
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Password changed; other sessions revoked, this one kept */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description code=current_password_invalid | validation_failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["Problem"];
         };
     };
     getAdminCompound: {
@@ -1818,6 +1971,35 @@ export interface operations {
                 };
             };
             422: components["responses"]["Problem"];
+        };
+    };
+    getAdminUnitsSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        total: number;
+                        active: number;
+                        inactive: number;
+                        /** @description Units with an active owner assignment */
+                        assigned: number;
+                        unassigned: number;
+                        pendingInvitations: number;
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
         };
     };
     getAdminUnitsBlocks: {
@@ -2227,7 +2409,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["Problem"];
+            /** @description code=validation_failed | visit_in_past (visit start must be later than now, Asia/Riyadh; endTime after startTime) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     deleteAdminRequestsByRequestIdCommentsByEventId: {
@@ -2517,6 +2707,37 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": components["schemas"]["StreamEvent"];
+                };
+            };
+        };
+    };
+    getAppMeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        minSupportedVersion: {
+                            /** @example 1.0.0 */
+                            ios: string;
+                            /** @example 1.0.0 */
+                            android: string;
+                        };
+                        latestVersion: {
+                            ios: string;
+                            android: string;
+                        };
+                    };
                 };
             };
         };
@@ -2818,7 +3039,10 @@ export interface operations {
     getAppMe: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Resident app semver; sent on every /app/v1 call (v1.1). */
+                "X-App-Version"?: components["parameters"]["AppVersionHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -2833,6 +3057,7 @@ export interface operations {
                     "application/json": components["schemas"]["ResidentMe"];
                 };
             };
+            426: components["responses"]["AppUpdateRequired"];
         };
     };
     patchAppMe: {
