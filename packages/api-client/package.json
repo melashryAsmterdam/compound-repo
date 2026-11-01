@@ -8,7 +8,7 @@
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "scripts": {
     "gen": "openapi-typescript ../api-contract/openapi.yaml -o src/schema.d.ts",
-    "build": "pnpm gen && tsc -p tsconfig.json",
+    "build": "pnpm gen && tsc -p tsconfig.json && cp src/schema.d.ts dist/schema.d.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": { "openapi-fetch": "^0.14.0" },
